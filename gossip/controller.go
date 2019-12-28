@@ -197,7 +197,7 @@ func (c *Controller) ScanPeers() {
 		}
 
 		//Remove irrecoverable peer
-		if peer.IsIrrecoverable() {
+		if peer.IsCtrlIrrecoverable() {
 			log.WithFields(log.Fields{"controller": c, "func": "ScanPeers", "peer": peer}).Info("Removing irrecoverable peer")
 			removePeerChan <- peer.Config
 			return true

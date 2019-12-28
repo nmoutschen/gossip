@@ -86,6 +86,13 @@ func (p *Peer) IsIrrecoverable() bool {
 	return p.LastSuccess+PeerMaxPingDelay < time.Now().Unix()
 }
 
+/*IsCtrlIrrecoverable returns if a peer is considered as permanently
+unreachable for a controller node.
+*/
+func (p *Peer) IsCtrlIrrecoverable() bool {
+	return p.LastSuccess+ControllerMaxPingDelay < time.Now.Unix()
+}
+
 /*IsUnreachable returns if the peer is considered unreachable
 
 If the number of attempts to contact the peer exceeds the PeerMaxAttempts

@@ -6,6 +6,8 @@ import (
 
 //TODO: Switch to dynamic config
 const (
+	//ControllerMaxPingDelay is the time (in seconds) before the controller will consider a peer as irrecoverable
+	ControllerMaxPingDelay int64 = 60 * 60 //1 hour
 	//ControllerScanDelay is the delay between two scans from a controller instance
 	ControllerScanDelay time.Duration = 60 * time.Second
 	//PeerBackoffDuration is the base duration before retrying to send a message to a peer
@@ -17,7 +19,7 @@ const (
 	//PeerMaxRetries is the number of retries before giving up on sending a message to a peer
 	PeerMaxRetries int = 3
 	//PeerMaxPingDelay is the time (in seconds) before the node will consider a peer as irrecoverable
-	PeerMaxPingDelay int64 = 300
+	PeerMaxPingDelay int64 = 5 * 60 //5 minutes
 	//PeerMinPeers is the minimum number of peers that any peer should have
 	PeerMinPeers int = 3
 	//PingDelay is the delay between two ping attempts
