@@ -5,6 +5,11 @@ This repository contains a sample implementation of a gossip protocol for experi
 
 __DISCLAIMER__: this repository is for experimentation purposes only with the goal of learning about and playing with gossip protocols. This is not and will not be production-ready at any point in time. Do not use this in production.
 
+* [Usage](#usage)
+* [Design considerations](#design-considerations)
+* [Components](#components)
+* [How it works](#how-it-works)
+
 ## Usage
 
 ### Data nodes
