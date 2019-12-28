@@ -40,7 +40,7 @@ func (n *Node) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	n.peerChan <- *config
+	n.addPeerChan <- *config
 	response(w, r, http.StatusOK, "Peering request received")
 }
 
@@ -90,17 +90,4 @@ func (n *Node) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(status)
-}
-
-//methodNotAllowedHandler handles requests with unsupported request methods
-func methodNotAllowedHandler(w http.ResponseWriter, r *http.Request) {
-	response(w, r, http.StatusMethodNotAllowed, "Method Not Allowed")
-}
-
-//response sends basic responses back to the requester
-func response(w http.ResponseWriter, r *http.Request, statusCode int, msg string) {
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(Response{
-		Message: msg,
-	})
 }

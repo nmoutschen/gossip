@@ -1,11 +1,12 @@
 package gossip
 
 import (
-	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"sort"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 //Node represents the management unit for this node
@@ -16,8 +17,8 @@ type Node struct {
 
 	//fetchStateChan is a channel to force fetch updates from other peers
 	fetchStateChan chan *Peer
-	//peerChan is a channel to receive peering requests
-	peerChan chan Config
+	//addPeerChan is a channel to receive peering requests
+	addPeerChan chan Config
 	//peerStateChan is a channel to receive state updates that need to be propagated to peers
 	peerStateChan chan State
 	//stateChan is a channel to receive state updates
@@ -33,7 +34,7 @@ func NewNode(ip string, port int) *Node {
 		},
 
 		fetchStateChan: make(chan *Peer, 8),
-		peerChan:       make(chan Config, 8),
+		addPeerChan:    make(chan Config, 8),
 		peerStateChan:  make(chan State, 8),
 		stateChan:      make(chan State, 8),
 	}
@@ -64,9 +65,9 @@ func (n *Node) FindPeer(config Config) (int, bool) {
 //Run start the workers and run an HTTP server
 func (n *Node) Run() {
 	//Start workers
-	go n.fetchStateChanWorker()
-	go n.peerChanWorker()
-	go n.peerStateChanWorker()
+	go n.addPeerWorker()
+	go n.fetchStateWorker()
+	go n.peerSendStateWorker()
 	go n.pingWorker()
 	go n.stateChanWorker()
 
@@ -85,20 +86,20 @@ func (n Node) String() string {
 	return n.Config.String()
 }
 
-/*fetchStateChanWorker waits for peers on the n.fetchStateChan channel and
+/*fetchStateWorker waits for peers on the n.fetchStateChan channel and
 retrieves the last state from other peers
 */
-func (n *Node) fetchStateChanWorker() {
+func (n *Node) fetchStateWorker() {
 	for {
 		peer := <-n.fetchStateChan
-		log.WithFields(log.Fields{"node": n, "peer": peer, "func": "fetchStateChanWorker"}).Info("Fetching latest state")
+		log.WithFields(log.Fields{"node": n, "peer": peer, "func": "fetchStateWorker"}).Info("Fetching latest state")
 
 		/*It's possible that we have already fetched the latest state from the
 		peer. If that's the case, ignore, as this would generate a useless
 		GET request to the peer.
 		*/
 		if peer.LastState <= n.State.Timestamp {
-			log.WithFields(log.Fields{"node": n, "peer": peer, "func": "fetchStateChanWorker"}).Info("Skip fetching state")
+			log.WithFields(log.Fields{"node": n, "peer": peer, "func": "fetchStateWorker"}).Info("Skip fetching state")
 			continue
 		}
 
@@ -108,7 +109,7 @@ func (n *Node) fetchStateChanWorker() {
 	}
 }
 
-/*peerChanWorker waits for new configs on the n.peerChan channel and process
+/*addPeerWorker waits for new configs on the n.addPeerChan channel and process
 them.
 
 If the node is known, there is no need to do anything, so the message can
@@ -122,21 +123,21 @@ This behavior prevents infinite loops of peering requests between two nodes,
 but allow the control plane to send the same request as any other node in the
 network.
 */
-func (n *Node) peerChanWorker() {
+func (n *Node) addPeerWorker() {
 	for {
-		config := <-n.peerChan
-		log.WithFields(log.Fields{"node": n, "config": config, "func": "peerChanWorker"}).Info("Received peering request")
+		config := <-n.addPeerChan
+		log.WithFields(log.Fields{"node": n, "config": config, "func": "addPeerWorker"}).Info("Received peering request")
 
 		//Skip if self.
 		if config == n.Config {
-			log.WithFields(log.Fields{"node": n, "config": config, "func": "peerChanWorker"}).Info("Skip self-peering request")
-			return
+			log.WithFields(log.Fields{"node": n, "config": config, "func": "addPeerWorker"}).Info("Skip self-peering request")
+			continue
 		}
 
 		//Skip if already known.
 		if _, found := n.FindPeer(config); found {
-			log.WithFields(log.Fields{"node": n, "config": config, "func": "peerChanWorker"}).Info("Skip known peer")
-			return
+			log.WithFields(log.Fields{"node": n, "config": config, "func": "addPeerWorker"}).Info("Skip known peer")
+			continue
 		}
 
 		//Add the peer to the list of known peers.
@@ -150,10 +151,10 @@ func (n *Node) peerChanWorker() {
 	}
 }
 
-/*peerStateChanWorker waits for new states on the n.peerStateChan channel and
+/*peerSendStateWorker waits for new states on the n.peerStateChan channel and
 sends the state to all known peers.
 */
-func (n *Node) peerStateChanWorker() {
+func (n *Node) peerSendStateWorker() {
 	for {
 		state := <-n.peerStateChan
 
@@ -170,7 +171,7 @@ func (n *Node) peerStateChanWorker() {
 		} else {
 			peers = n.Peers
 		}
-		log.WithFields(log.Fields{"node": n, "state": state, "func": "peerStateChanWorker"}).Infof("Sending state update to %d/%d peers", len(peers), len(n.Peers))
+		log.WithFields(log.Fields{"node": n, "state": state, "func": "peerSendStateWorker"}).Infof("Sending state update to %d/%d peers", len(peers), len(n.Peers))
 
 		for _, peer := range peers {
 			go peer.Send(state)
@@ -193,6 +194,14 @@ func (n *Node) pingWorker() {
 				continue
 			}
 
+			/*Despite running a goroutine in a loop, we don't need to wait for
+			completion here as this routine doesn't have any side effect to the
+			pingWorker.
+
+			peersToRemove is filled before this routine, therefore it is
+			already ready to be processed, without having to wait for the
+			goroutines to finish their execution.
+			*/
 			go func(n *Node, peer *Peer) {
 				peer.Ping()
 				if peer.LastState > n.State.Timestamp {

@@ -12,17 +12,23 @@ import (
 
 //Peer represents a peer to this node
 type Peer struct {
-	LastState   int64
+	//Attempts is the number of unsuccessful attempts to reach the peer
+	Attempts int
+	//Config is the peer configuration, such as IP address and port number
+	Config Config
+	//LastState is the identifier for the last known data state for that peer
+	LastState int64
+	//LastSuccess is the timestamp in seconds when the last successful contact with the peer was made
 	LastSuccess int64
-	Attempts    int
-	Config      Config
+	//Peers is the list of peers of this peer
+	Peers []*Peer
 }
 
 //NewPeer creates a new Peer
 func NewPeer(config Config) *Peer {
 	p := &Peer{
-		LastSuccess: time.Now().Unix(),
 		Config:      config,
+		LastSuccess: time.Now().Unix(),
 	}
 
 	return p
@@ -51,6 +57,28 @@ func (p *Peer) Get() (State, error) {
 
 	log.WithFields(log.Fields{"peer": p, "func": "Get", "state": state}).Info("Retrieved state")
 	return *state, nil
+}
+
+/*GetPeers retrieves the peers of this peer.
+ */
+func (p *Peer) GetPeers() ([]Config, error) {
+	res, err := http.Get(p.Addr() + "/peers")
+	if err != nil || res.StatusCode != http.StatusOK {
+		log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Warn("Failed to retrieve peers")
+		p.UpdateStatus(false)
+		return nil, errors.New("Failed to retrieve peers")
+	}
+
+	peersResponse := &PeersResponse{}
+	if err = json.NewDecoder(res.Body).Decode(peersResponse); err != nil {
+		log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Warn("Failed to decode peers")
+		p.UpdateStatus(false)
+		return nil, errors.New("Failed to decode peers")
+	}
+
+	log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Info("Retrieved peers")
+	p.UpdateStatus(true)
+	return peersResponse.Peers, nil
 }
 
 //IsIrrecoverable returns if a peer is considered as permanently unreachable
@@ -106,7 +134,7 @@ func (p *Peer) Send(state State) {
 		}
 
 		//TODO: add jitter
-		time.Sleep(PeerBackoffDuration * (1 >> i))
+		time.Sleep(PeerBackoffDuration * (1 << i))
 	}
 
 	/*Set the status as failed for this message.
