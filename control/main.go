@@ -2,23 +2,16 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/nmoutschen/gossip/gossip"
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	control := gossip.NewController(getIP(), getPort())
-
-	// Manually add a node for testing
-	p := &gossip.Peer{
-		Config: gossip.Config{
-			IP:   "127.0.0.1",
-			Port: 8080,
-		},
-	}
-	control.Peers.Store(p.Config, p)
-
 	control.Run()
 }
 

@@ -23,7 +23,7 @@ func (c *Controller) peersGetHandler(w http.ResponseWriter, r *http.Request) {
 	log.WithFields(log.Fields{"controller": c, "func": "peersGetHandler"}).Info("Received GET /peers")
 	//Create response
 	cpr := &CtrlPeersResponse{}
-	c.Peers.Range(func(key interface{}, value interface{}) bool {
+	c.Peers.Range(func(key, value interface{}) bool {
 		config, ok := key.(Config)
 		if !ok {
 			log.WithFields(log.Fields{"controller": c, "func": "peersGetHandler", "config": config}).Warn("Failed to assert config")

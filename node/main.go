@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/nmoutschen/gossip/gossip"
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	node := gossip.NewNode(getIP(), getPort())
 	node.Run()
 }

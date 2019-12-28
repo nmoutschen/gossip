@@ -41,12 +41,6 @@ func NewNode(ip string, port int) *Node {
 
 	log.WithFields(log.Fields{"node": n, "func": "NewNode"}).Info("Initializing node")
 
-	/*Seed random number generator
-
-	This is used when the number of peers exceeds PeerMaxRecipients.
-	*/
-	rand.Seed(time.Now().UnixNano())
-
 	return n
 }
 

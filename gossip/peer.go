@@ -86,6 +86,15 @@ func (p *Peer) IsIrrecoverable() bool {
 	return p.LastSuccess+PeerMaxPingDelay < time.Now().Unix()
 }
 
+/*IsUnreachable returns if the peer is considered unreachable
+
+If the number of attempts to contact the peer exceeds the PeerMaxAttempts
+threshold, the peer is considered unreachable.
+*/
+func (p *Peer) IsUnreachable() bool {
+	return p.Attempts >= PeerMaxAttempts
+}
+
 //Ping checks if the peer is reachable and retrieves its status
 func (p *Peer) Ping() {
 	log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Debug("Ping")
@@ -176,15 +185,6 @@ func (p *Peer) SendPeeringRequest(config Config) {
 //String returns a string representation of the peer
 func (p Peer) String() string {
 	return p.Config.String()
-}
-
-/*IsUnreachable returns if the peer is considered unreachable
-
-If the number of attempts to contact the peer exceeds the PeerMaxAttempts
-threshold, the peer is considered unreachable.
-*/
-func (p *Peer) IsUnreachable() bool {
-	return p.Attempts >= PeerMaxAttempts
 }
 
 /*UpdateStatus updates the status of the peer following an action
