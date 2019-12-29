@@ -201,3 +201,5 @@ Once all data nodes have been discovered, the controller node will [traverse the
 Once the controller has explored all nodes connected to the starting node, it checks if it visited all the known data nodes. If not, this means that there is a partition in the graph and will repeat the process until it has discovered all the connected graphs (clusters).
 
 From there, the controller will take random nodes in each clusters and peer them together in a ring. If there are four clusters (`c0`, `c1`, `c2` and `c3`), it will connect `c0` to `c1`, `c1` to `c2`, `c2` to `c3` and, finally, `c3` back to `c0`.
+
+Connecting clusters in a ring is overall more resilient than connecting them in line, as it ensures that clusters are [2-connected](http://mathworld.wolfram.com/k-ConnectedGraph.html) to each other (versus 1-connected), although it only gives a guarantee that each node is 1-connected to any other node.
