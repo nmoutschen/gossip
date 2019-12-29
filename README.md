@@ -177,3 +177,27 @@ __Long partition__
 In case of a long partition, the nodes will consider peers on the other side of the partition as irrecoverable. After an even longer period of time, the controller will also consider these nodes irrecoverable. If network recovery happens between these two periods, the controller's routine scan will detect that the graph is not fully connected anymore and send peering requests to nodes to re-establish the graph. Once this is done, peers on the edge will perform heartbeats which will help recover and propagate the latest state.
 
 In case of a partition so long that the controller nodes consider the nodes as irrecoverable, the network must be manually reconnected by sending a `POST /peers` call to the controller node with one of the nodes that were considered irrecoverable. The controller's routine scan will automatically discover the other nodes in that graph. If there are multiple partitions, you will need to manually add one node from each disconnected graph.
+
+### Controller scan
+
+__Discovery phase__
+
+<p align="center">
+  <img alt="Animated GIF showing the scan process, where a controller node progressively discover new data nodes as it scans known nodes" src="images/scan-discovery.gif"/>
+</p>
+
+Controller nodes perform scan of the network graphs at regular interval. The scan consists of retrieving the list of peers of each data nodes that they known. Thus, if there are any data nodes that they did not know about, they are able to discover it and add it to the list of nodes to scan.
+
+This allows the controller nodes to discover the complete list of nodes in a connected graph even if they only known one data node.
+
+__Identifying clusters__
+
+<p align="center">
+  <img alt="Animated GIF showing the cluster identification process, using graph traversal" src="images/scan-traversal.gif"/>
+</p>
+
+Once all data nodes have been discovered, the controller node will [traverse the graph](https://en.wikipedia.org/wiki/Graph_traversal) of peering relationships found in the discovery phase, starting from a random data node.
+
+Once the controller has explored all nodes connected to the starting node, it checks if it visited all the known data nodes. If not, this means that there is a partition in the graph and will repeat the process until it has discovered all the connected graphs (clusters).
+
+From there, the controller will take random nodes in each clusters and peer them together in a ring. If there are four clusters (`c0`, `c1`, `c2` and `c3`), it will connect `c0` to `c1`, `c1` to `c2`, `c2` to `c3` and, finally, `c3` back to `c0`.
