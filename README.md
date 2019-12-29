@@ -160,7 +160,19 @@ If a network becomes separated in two disconnected graphs, then reconnect throug
 
 There are multiple recovery scenarios from a network partition, depending on its duration.
 
+__Short partition__
+
+<p align="center">
+  <img alt="Animated GIF showing the automated recovery following a short partition, where the nodes are able to ping each others and automatically recover the latest state" src="images/short-recovery.gif"/>
+</p>
+
 In case of a short partition, the heartbeat mechanism inside nodes will automatically fetch the latest state and propagate it.
+
+__Long partition__
+
+<p align="center">
+  <img alt="Animated GIF showing the automated recovery following a long partition, where the control node send peering requests to nodes on two sides of a disconnected graph" src="images/long-recovery.gif"/>
+</p>
 
 In case of a long partition, the nodes will consider peers on the other side of the partition as irrecoverable. After an even longer period of time, the controller will also consider these nodes irrecoverable. If network recovery happens between these two periods, the controller's routine scan will detect that the graph is not fully connected anymore and send peering requests to nodes to re-establish the graph. Once this is done, peers on the edge will perform heartbeats which will help recover and propagate the latest state.
 
