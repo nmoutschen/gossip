@@ -96,6 +96,8 @@ The system is made of two different types of components: __data nodes__ and __co
 
 ### Data propagation
 
+![Animated image showing the propagation of state across nodes](images/propagation.gif)
+
 __1. Receving a new data state__
 
 When a data node receives a new state from an end-user, it will add a timestamp in nanoseconds, which will become the unique identifier for that piece of information.
