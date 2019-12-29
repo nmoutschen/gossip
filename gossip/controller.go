@@ -11,8 +11,12 @@ import (
 
 //Controller represents a controller instance
 type Controller struct {
+	/*Config contains the configuration (IP address and port) for the
+	controller's HTTP server
+	*/
 	Config Config
-	Peers  *sync.Map
+	//Peers is a sync.Map[Config]*Peer containing all known peers.
+	Peers *sync.Map
 
 	addPeerChan chan Config
 }
@@ -116,6 +120,26 @@ func (c *Controller) FindClusters() [][]*Peer {
 	return clusters
 }
 
+/*FindLowConnectedPeers parse through the list of peers and return those who
+have less than PeerMinPeers peers.
+*/
+func (c *Controller) FindLowConnectedPeers() (lcPeers []*Peer) {
+	c.Peers.Range(func(_, value interface{}) bool {
+		peer, ok := value.(*Peer)
+		if !ok {
+			log.WithFields(log.Fields{"controller": c, "func": "FindLowConnectedPeers", "peer": peer}).Warn("Failed to assert peer")
+			return true
+		}
+
+		if len(peer.Peers) < PeerMinPeers {
+			lcPeers = append(lcPeers, peer)
+		}
+		return true
+	})
+
+	return lcPeers
+}
+
 /*MergeClusters merge clusters together by sending peering requests to pairs of
 nodes across clusters.
 */
@@ -169,6 +193,13 @@ func (c *Controller) MergeClusters(clusters [][]*Peer) {
 			}
 			log.WithFields(log.Fields{"controller": c, "func": "MergeClusters"}).Infof("Connecting peers %v and %v", origs[i], clusters[dPos][d])
 			origs[i].SendPeeringRequest(clusters[dPos][d].Config)
+			/*Manually add the peers together, even though there is no proof
+			that the peering was successful at this team. It is necessary to do
+			this for the identification of nodes with less than PeerMinPeers
+			peers.
+			*/
+			origs[i].Peers = append(origs[i].Peers, clusters[dPos][d])
+			clusters[dPos][d].Peers = append(clusters[dPos][d].Peers, origs[i])
 		}
 	}
 }
@@ -289,11 +320,69 @@ func (c *Controller) scanWorker() {
 		//Merge clusters
 		c.MergeClusters(clusters)
 
-		/* TODO:
-		* find peers with less than PeerMinPeers peers
-		* add peerings to repair separate clusters and peers with less
-		  than PeerMinPeers peers
+		/*Find peers with less than PeerMinPeers peers and connect them
+		together
+
+		To do so, we duplicate peers based on the number of missing
+		connections, shuffle the slice, then pair them two by two.
+
+		Peers that did not find a match, either because the number of peers in
+		the slice was odd or because they ended up matched with themselves, are
+		paired with random peers in the network.
 		*/
+		var lcPeers []*Peer
+		for _, peer := range c.FindLowConnectedPeers() {
+			for i := len(peer.Peers); i < PeerMinPeers; i++ {
+				lcPeers = append(lcPeers, peer)
+			}
+		}
+		log.WithFields(log.Fields{"controller": c, "func": "scanWorker"}).Infof("Found %d peers with not enough peers", len(lcPeers))
+		rand.Shuffle(len(lcPeers), func(i, j int) {
+			lcPeers[i], lcPeers[j] = lcPeers[j], lcPeers[i]
+		})
+
+		//Left-over peers
+		var loPeers []*Peer
+
+		//Make the slice an odd number
+		if len(lcPeers)%2 == 1 {
+			loPeers = append(loPeers, lcPeers[0])
+			lcPeers = lcPeers[1:]
+		}
+
+		//Match peers two-by-two
+		for i := 0; i < len(lcPeers); i += 2 {
+			if lcPeers[i].Config == lcPeers[i+1].Config {
+				log.WithFields(log.Fields{"controller": c, "func": "scanWorker", "peer": lcPeers[i]}).Info("Found duplicate peer")
+				loPeers = append(loPeers, lcPeers[i], lcPeers[i+1])
+			} else {
+				log.WithFields(log.Fields{"controller": c, "func": "scanWorker"}).Infof("Connecting peers %v and %v", lcPeers[i], lcPeers[i+1])
+				lcPeers[i].SendPeeringRequest(lcPeers[i+1].Config)
+			}
+		}
+
+		/*Matching left-over peers with a random know peer
+
+		There is still a potential for collision (peer matching with itself),
+		however, we voluntarily disregard it at this step.
+		*/
+		if len(loPeers) > 0 {
+			//Transform c.Peers into a slice
+			var peers []*Peer
+			c.Peers.Range(func(_, value interface{}) bool {
+				peer, ok := value.(*Peer)
+				if !ok {
+					log.WithFields(log.Fields{"controller": c, "func": "ScanPeers", "peer": peer}).Warn("Failed to assert peer")
+					return true
+				}
+				peers = append(peers, peer)
+				return true
+			})
+
+			for _, peer := range loPeers {
+				peer.SendPeeringRequest(peers[rand.Intn(len(peers))].Config)
+			}
+		}
 	}
 }
 

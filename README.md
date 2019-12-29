@@ -180,6 +180,8 @@ In case of a partition so long that the controller nodes consider the nodes as i
 
 ### Controller scan
 
+_Note: you can run the [`tests/merge.sh`](tests/merge.sh) script to see how the controller does this in practice._
+
 __Discovery phase__
 
 <p align="center">
@@ -203,3 +205,15 @@ Once the controller has explored all nodes connected to the starting node, it ch
 From there, the controller will take random nodes in each clusters and peer them together in a ring. If there are four clusters (`c0`, `c1`, `c2` and `c3`), it will connect `c0` to `c1`, `c1` to `c2`, `c2` to `c3` and, finally, `c3` back to `c0`.
 
 Connecting clusters in a ring is overall more resilient than connecting them in line, as it ensures that clusters are [2-connected](http://mathworld.wolfram.com/k-ConnectedGraph.html) to each other (versus 1-connected), although it only gives a guarantee that each node is 1-connected to any other node.
+
+__Identifying nodes with not enough peers__
+
+<p align="center">
+  <img alt="Animated GIF showing the peering process for nodes with not enough peers" src="images/scan-peers.gif"/>
+</p>
+
+Once all clusters have been merged, the controller then looks for data nodes that do not have enough peers to increase the overall reliability of the network. These nodes are then paired randomly with each other.
+
+Since the previous operation removed all disconnected graph, peering nodes with a low number of peers with each other helps prevent having a low number of nodes that are hyperconnected.
+
+This process can lead to nodes not finding a match (they were peering with themselves or the number of peerings missing is odd). If that is the case, they are peered randomly with any data node in the network.
