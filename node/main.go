@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/nmoutschen/gossip/gossip"
@@ -28,8 +28,7 @@ func getPort() int {
 	if !ok {
 		return 8080
 	}
-	var port int
-	_, err := fmt.Sscanf(sPort, "%d", &port)
+	port, err := strconv.Atoi(sPort)
 	if err != nil {
 		return 8080
 	}
