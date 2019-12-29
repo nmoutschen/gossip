@@ -122,6 +122,12 @@ __X. Rinse and repeat__
 
 The new piece of information keeps propagating throughout the network until all reachable nodes have received it or until a newer state version propagates.
 
+### Data propagation with multiple versions
+
+![Animated GIF showing data propagation with multiple state versions](images/propagation-2.gif)
+
+When they receive a new state, nodes look at the state timestamp and compare it with the internal state timestamp. If the received state is older than the current state, the node discard that message. This ensures that nodes will end up with the latest available state.
+
 ### Heartbeats
 
 At regular interval, data nodes will retrieve status information from their peers.
