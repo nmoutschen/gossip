@@ -97,9 +97,7 @@ The system is made of two different types of components: __data nodes__ and __co
 ### Data propagation
 
 <p align="center">
-
-![Animated image showing the propagation of a state version across nodes in a network](images/propagation.gif)
-
+  <img alt="Animated image showing the propagation of a state version across nodes in a network" src="images/propagation.gif"/>
 </p>
 
 __1. Receving a new data state__
@@ -129,9 +127,7 @@ The new piece of information keeps propagating throughout the network until all 
 ### Data propagation with multiple versions
 
 <p align="center">
-
-![Animated GIF showing data propagation with multiple state versions, the most recent state version takes over](images/propagation-2.gif)
-
+  <img alt="Animated GIF showing data propagation with multiple state versions, the most recent state version takes over" src="images/propagation-2.gif"/>
 </p>
 
 When they receive a new state, nodes look at the state timestamp and compare it with the internal state timestamp. If the received state is older than the current state, the node discard that message. This ensures that nodes will end up with the latest available state.
@@ -139,9 +135,7 @@ When they receive a new state, nodes look at the state timestamp and compare it 
 ### Heartbeats
 
 <p align="center">
-
-![Animated GIF showing the heartbeat process](images/heartbeat.gif)
-
+  <img alt="Animated GIF showing the heartbeat process" src="images/heartbeat.gif"/>
 </p>
 
 At regular interval, data nodes will retrieve status information from their peers.
