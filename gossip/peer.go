@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 //Peer represents a peer to this node
@@ -56,6 +57,8 @@ func (p *Peer) Get() (State, error) {
 	}
 
 	log.WithFields(log.Fields{"peer": p, "func": "Get", "state": state}).Info("Retrieved state")
+	p.LastState = state.Timestamp
+	p.UpdateStatus(true)
 	return *state, nil
 }
 
