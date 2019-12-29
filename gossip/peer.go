@@ -90,7 +90,7 @@ func (p *Peer) IsIrrecoverable() bool {
 unreachable for a controller node.
 */
 func (p *Peer) IsCtrlIrrecoverable() bool {
-	return p.LastSuccess+ControllerMaxPingDelay < time.Now.Unix()
+	return p.LastSuccess+ControllerMaxPingDelay < time.Now().Unix()
 }
 
 /*IsUnreachable returns if the peer is considered unreachable
