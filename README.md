@@ -7,6 +7,7 @@ __DISCLAIMER__: this repository is for experimentation purposes only with the go
 
 * [Usage](#usage)
 * [Design considerations](#design-considerations)
+* [Drawbacks](#drawbacks)
 * [Components](#components)
 * [How it works](#how-it-works)
 
@@ -84,6 +85,15 @@ This implementation was built with the following considerations in mind:
 * __Sparse graph__: Every data node in the system should only be connected to a few other data nodes. Data propagation should be handled through a [gossip protocol](https://en.wikipedia.org/wiki/Gossip_protocol).
 * __No data in the control plane__: Controller nodes should not have access or need to read the data state in different nodes. They should only ensure [graph connectivity](https://en.wikipedia.org/wiki/Connectivity_(graph_theory)).
 * __Simple data nodes, smart controllers__: Most of the complex and compute-intensive logic should be handled by the controller nodes. The data nodes should only be preoccupied with checking availability of their peers and that they have the latest known data state.
+
+## Drawbacks
+
+Due to design decisions and as this is an experimentation project, this implementation has the following drawbacks:
+
+* __Acknowledge then save__: When a node receives a new state, it will immediately acknowledge it with an HTTP status code 200 before having any guarantee that the state has been saved internally and propagated to other peers. If a node fails right after acknowledging the new state, that state will be lost.
+* __Potentially large distance between two nodes__: Controller nodes do not enforce a specific minimum distance between two data nodes. This means that the shortest path between two data nodes could go through a large number of data nodes. This slows down data propagation and prevents the implementation of an efficient quorum-based acknowledgement mechanism. However, large distances lead to more interesting behaviors from an experimentation point of view.
+* __No authentication__: Any system can submit a new state, with or without a timestamp. A bug could result in a data node sending a message without a timestamp, which would be interpreted by the received nodes as a newer state. This could lead to conflicts if a newer correct state was propagating throughout the network at the same time, as the older state would overwrite the newer state.
+* __No integrity guarantee__: The data nodes do not have a mechanism to check data integrity. A bad actor or a bug could result in a message being sent with the same timestamp as the latest good state, but with different data. Some of the data nodes would hold the correct information while others would not without any way for them to know and recover from that.
 
 ## Components
 
