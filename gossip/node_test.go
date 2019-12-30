@@ -132,19 +132,44 @@ func TestNodePeerSendStateWorker(t *testing.T) {
 		{PeerMaxRecipients + 1, PeerMaxRecipients},
 	}
 
+	var receivedCount int
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			t.Errorf("r.Method == %s; want %s", r.Method, "GET")
+		}
+		if r.URL.Path != "/" {
+			t.Errorf("r.URL.PATH == %s; want %s", r.URL.Path, "/")
+		}
+		receivedCount++
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(Response{
+			Message: "State received",
+		})
+	}))
+	peer := NewPeer(parseURL(testServer.URL))
+
 	state := State{time.Now().UnixNano(), "Test data"}
 	n := NewNode("127.0.0.1", 8080)
 
 	for i, testCase := range testCases {
 		for i := 0; i < testCase.Recipients; i++ {
-			n.Peers = append(n.Peers, NewPeer(Config{"127.0.0.1", 8081}))
+			n.Peers = append(n.Peers, peer)
 		}
 
 		count := n.PeerSendState(state)
 
+		/*Need to wait for asynchronous processing. This should be enough but
+		could cause issues.
+		*/
+		time.Sleep(100 * time.Millisecond)
+
 		if count != testCase.Expected {
 			t.Errorf("count == %d in test case %d; want %d", count, i, testCase.Expected)
 		}
+		if receivedCount != testCase.Expected {
+			t.Errorf("receivedCount == %d in test case %d; want %d", receivedCount, i, testCase.Expected)
+		}
+		receivedCount = 0
 	}
 
 	//TODO: Test that testCase.Expected requests are sent to the peers
@@ -195,8 +220,53 @@ func TestNodePingPeers(t *testing.T) {
 	if !received {
 		t.Errorf("HTTP Server never received a request")
 	}
+}
 
-	//TODO: test with an unreachable peer
+func TestNodePingPeersUnreachable(t *testing.T) {
+	//Initialize peer
+	var received bool
+	peer := &Peer{}
+	peer.Attempts = 10
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			t.Errorf("r.Method == %s; want %s", r.Method, "GET")
+		}
+		if r.URL.Path != "/status" {
+			t.Errorf("r.URL.PATH == %s; want %s", r.URL.Path, "/status")
+		}
+		received = true
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(StatusResponse{
+			LastState: peer.LastState,
+		})
+	}))
+	defer func() { testServer.Close() }()
+	peer.Config = parseURL(testServer.URL)
+
+	//Initialize node
+	n := NewNode("127.0.0.1", 8080)
+	n.Peers = append(n.Peers, peer)
+
+	//Ping all peers
+	go n.PingPeers()
+
+	/*Need to wait for asynchronous processing. This should be enough but could
+	cause issues.
+	*/
+	time.Sleep(100 * time.Millisecond)
+
+	//Check results
+	if len(n.Peers) != 0 {
+		t.Errorf("len(n.Peers) == %d; want %d", len(n.Peers), 0)
+	}
+
+	if peer.Attempts != 10 {
+		t.Errorf("peer.Attempts == %d; want %d", peer.Attempts, 10)
+	}
+
+	if received {
+		t.Errorf("HTTP Server received a request")
+	}
 }
 
 func TestNodeStateWorker(t *testing.T) {
@@ -210,5 +280,32 @@ func TestNodeStateWorker(t *testing.T) {
 
 	if n.State != state {
 		t.Errorf("n.State == %v; want %v", n.State, state)
+	}
+}
+
+func TestNodeUpdateState(t *testing.T) {
+	origState := State{
+		Timestamp: time.Now().UnixNano(),
+		Data:      "Test data",
+	}
+
+	testCases := []struct {
+		State    State
+		Expected bool
+	}{
+		{State{1, ""}, false},
+		{origState, false},
+		{State{origState.Timestamp + 1, "New state"}, true},
+		{State{0, "Data"}, true},
+	}
+
+	for i, testCase := range testCases {
+		n := NewNode("127.0.0.1", 8080)
+		n.UpdateState(origState)
+		updated := n.UpdateState(testCase.State)
+
+		if updated != testCase.Expected {
+			t.Errorf("n.UpdateState() == %t for test case %d; want %t", updated, i, testCase.Expected)
+		}
 	}
 }

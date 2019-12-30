@@ -181,6 +181,31 @@ func (n Node) String() string {
 	return n.Config.String()
 }
 
+/*UpdateState updates the internal state if it is older than the proposed
+state.
+
+This returns true if the internal state has been updated.
+*/
+func (n *Node) UpdateState(state State) bool {
+	//New state received from the end-user
+	if state.Timestamp == 0 {
+		state.Timestamp = time.Now().UnixNano()
+	}
+
+	switch {
+	case state.Timestamp < n.State.Timestamp:
+		log.WithFields(log.Fields{"node": n, "state": state, "func": "stateWorker"}).Info("Received obsolete state")
+	case state.Timestamp == n.State.Timestamp:
+		log.WithFields(log.Fields{"node": n, "state": state, "func": "stateWorker"}).Info("Received known state")
+	case state.Timestamp > n.State.Timestamp:
+		log.WithFields(log.Fields{"node": n, "state": state, "func": "stateWorker"}).Info("Received new state")
+		n.State = state
+		return true
+	}
+
+	return false
+}
+
 /*fetchStateWorker waits for peers on the n.fetchStateChan channel and
 retrieves the last state from those peers, then sends the state to the
 n.stateChan channel.
@@ -251,19 +276,7 @@ func (n *Node) stateWorker() {
 	for {
 		state := <-n.stateChan
 
-		//New state received from the end-user
-		if state.Timestamp == 0 {
-			state.Timestamp = time.Now().UnixNano()
-		}
-
-		switch {
-		case state.Timestamp < n.State.Timestamp:
-			log.WithFields(log.Fields{"node": n, "state": state, "func": "stateWorker"}).Info("Received obsolete state")
-		case state.Timestamp == n.State.Timestamp:
-			log.WithFields(log.Fields{"node": n, "state": state, "func": "stateWorker"}).Info("Received known state")
-		case state.Timestamp > n.State.Timestamp:
-			log.WithFields(log.Fields{"node": n, "state": state, "func": "stateWorker"}).Info("Received new state")
-			n.State = state
+		if n.UpdateState(state) {
 			n.peerStateChan <- state
 		}
 	}
