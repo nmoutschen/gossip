@@ -30,7 +30,7 @@ func NewController(ip string, port int) *Controller {
 		},
 		Peers: &sync.Map{},
 
-		addPeerChan: make(chan Config),
+		addPeerChan: make(chan Config, 8),
 	}
 
 	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Info("Initializing controller")
@@ -216,6 +216,8 @@ func (c *Controller) ScanPeers() {
 	//Start peer removal temporary worker
 	removePeerChan := make(chan Config, 8)
 	go c.removePeerWorker(removePeerChan)
+	//Closing the channel will automatically stop the worker
+	defer close(removePeerChan)
 
 	//Discovery phase
 	wg := &sync.WaitGroup{}
@@ -240,9 +242,6 @@ func (c *Controller) ScanPeers() {
 		return true
 	})
 	wg.Wait()
-
-	//Closing the channel will automatically stop the worker
-	close(removePeerChan)
 }
 
 //Run starts the control instance
@@ -285,17 +284,15 @@ func (c *Controller) addPeerWorker() {
 //removePeerWorker is a temporary worker to remove irrecoverable peers
 func (c *Controller) removePeerWorker(removePeerChan chan Config) {
 	for {
-		select {
-		case config := <-removePeerChan:
-			if _, ok := c.Peers.Load(config); ok {
-				log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker", "config": config}).Info("Removing peer")
-				c.Peers.Delete(config)
-			} else {
-				log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker", "config": config}).Debug("Ignore duplicate peer removal message")
-			}
-		case <-removePeerChan:
+		config, open := <-removePeerChan
+		if !open {
 			log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker"}).Debug("Stopping worker")
 			return
+		} else if _, ok := c.Peers.Load(config); ok {
+			log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker", "config": config}).Info("Removing peer")
+			c.Peers.Delete(config)
+		} else {
+			log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker", "config": config}).Debug("Ignore duplicate peer removal message")
 		}
 	}
 }
