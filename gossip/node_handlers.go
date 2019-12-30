@@ -2,8 +2,9 @@ package gossip
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 //peersHandler handles requests to the '/peers' path
