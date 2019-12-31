@@ -1,0 +1,20 @@
+name: gossip-test
+on: [push, pull_request]
+jobs:
+  gossip-test:
+    strategy:
+      matrix:
+        version: [1.13.x]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.version }}
+    - name: Checkout code
+      uses: actions/checkout@v1
+    - name: Test gossip package
+      run: |
+        cd gossip
+        go test -timeout 30s ./...
