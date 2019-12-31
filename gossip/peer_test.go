@@ -33,6 +33,23 @@ func TestNewPeer(t *testing.T) {
 	}
 }
 
+func TestPeerCanPeer(t *testing.T) {
+	p := NewPeer(Config{"127.0.0.1", 8080})
+	if p.CanPeer(p) != false {
+		t.Errorf("p.CanPeer(p) == %t; want %t", p.CanPeer(p), false)
+	}
+
+	p2 := NewPeer(Config{"127.0.0.1", 8081})
+	if p.CanPeer(p2) != true {
+		t.Errorf("p.CanPeer(p2) == %t before peering; want %t", p.CanPeer(p), true)
+	}
+
+	p.Peers = []*Peer{p2}
+	if p.CanPeer(p2) != false {
+		t.Errorf("p.CanPeer(p2) == %t when already peered; want %t", p.CanPeer(p), false)
+	}
+}
+
 func TestPeerGet(t *testing.T) {
 	testCases := []State{
 		{0, "Test Data"},

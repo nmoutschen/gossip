@@ -146,7 +146,7 @@ func TestControllerFindClustersTwoTriangles(t *testing.T) {
 	}
 }
 
-func TestControllerFindLowConnectedPeersLine(t *testing.T) {
+func TestControllerFindLowPeersLine(t *testing.T) {
 	//Create peers
 	peers := []*Peer{
 		NewPeer(Config{"127.0.0.1", 8080}),
@@ -170,14 +170,24 @@ func TestControllerFindLowConnectedPeersLine(t *testing.T) {
 	}
 
 	//Analyze peers
-	lcPeers := c.FindLowConnectedPeers()
+	lcPeers := c.FindLowPeers()
 
 	if len(lcPeers) != len(peers) {
 		t.Errorf("len(lcPeers) == %d; want %d", len(lcPeers), len(peers))
 	}
+
+	//Connect peers
+	c.ConnectLowPeers()
+
+	//Check connectivity
+	for _, peer := range peers {
+		if len(peer.Peers) < PeerMinPeers {
+			t.Errorf("len(peer.Peers) == %d; want >= %d", len(peer.Peers), PeerMinPeers)
+		}
+	}
 }
 
-func TestControllerFindLowConnectedPeersStar(t *testing.T) {
+func TestControllerFindLowPeersStar(t *testing.T) {
 	//Create peers
 	peers := []*Peer{
 		NewPeer(Config{"127.0.0.1", 8080}),
@@ -201,7 +211,7 @@ func TestControllerFindLowConnectedPeersStar(t *testing.T) {
 	}
 
 	//Analyze peers
-	lcPeers := c.FindLowConnectedPeers()
+	lcPeers := c.FindLowPeers()
 
 	if len(lcPeers) != len(peers)-1 {
 		t.Errorf("len(lcPeers) == %d; want %d", len(lcPeers), len(peers)-1)
@@ -211,9 +221,19 @@ func TestControllerFindLowConnectedPeersStar(t *testing.T) {
 			t.Errorf("Found %v in lcPeers", peer)
 		}
 	}
+
+	//Connect peers
+	c.ConnectLowPeers()
+
+	//Check connectivity
+	for _, peer := range peers {
+		if len(peer.Peers) < PeerMinPeers {
+			t.Errorf("len(peer.Peers) == %d; want >= %d", len(peer.Peers), PeerMinPeers)
+		}
+	}
 }
 
-func TestControllerFindLowConnectedPeersFull(t *testing.T) {
+func TestControllerFindLowPeersFull(t *testing.T) {
 	//Create peers
 	peers := []*Peer{
 		NewPeer(Config{"127.0.0.1", 8080}),
@@ -235,10 +255,20 @@ func TestControllerFindLowConnectedPeersFull(t *testing.T) {
 	}
 
 	//Analyze peers
-	lcPeers := c.FindLowConnectedPeers()
+	lcPeers := c.FindLowPeers()
 
 	if len(lcPeers) != 0 {
 		t.Errorf("len(lcPeers) == %d; want %d", len(lcPeers), 0)
+	}
+
+	//Connect peers, this should not do anything
+	c.ConnectLowPeers()
+
+	//Check connectivity
+	for _, peer := range peers {
+		if len(peer.Peers) < PeerMinPeers {
+			t.Errorf("len(peer.Peers) == %d; want >= %d", len(peer.Peers), PeerMinPeers)
+		}
 	}
 }
 

@@ -40,6 +40,27 @@ func (p *Peer) Addr() string {
 	return fmt.Sprintf("%s://%s:%d", Protocol, p.Config.IP, p.Config.Port)
 }
 
+/*CanPeer returns whether this peer can connect with the target peer.
+
+This will return false if this is the same peer or if they are already peered
+to each other.
+*/
+func (p *Peer) CanPeer(tgt *Peer) bool {
+	if p.Config == tgt.Config {
+		log.WithFields(log.Fields{"peer": p, "func": "CanPeer"}).Info("Cannot peer with itself")
+		return false
+	}
+
+	for _, subPeer := range p.Peers {
+		if subPeer.Config == tgt.Config {
+			log.WithFields(log.Fields{"peer": p, "func": "CanPeer"}).Info("Cannot peer with already peered node")
+			return false
+		}
+	}
+
+	return true
+}
+
 //Get retrieves the latest state from the peer
 func (p *Peer) Get() (State, error) {
 	res, err := http.Get(p.Addr())

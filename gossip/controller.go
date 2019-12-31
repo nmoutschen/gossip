@@ -38,6 +38,86 @@ func NewController(ip string, port int) *Controller {
 	return c
 }
 
+/*ConnectLowPeers will find peers for nodes that have less than PeerMinPeers
+peers.
+
+To do so, we duplicate peers based on the number of missing connections,
+shuffle the slice, then pair them two by two.
+
+Peers that did not find a match, either because the number of peers in the
+slice was odd or because they ended up matched with themselves, are paired with
+random peers in the network.
+*/
+func (c *Controller) ConnectLowPeers() {
+	/*Find peers with low peers and duplicate each one based on the number of
+	missing connections.
+	*/
+	var lcPeers []*Peer
+	for _, peer := range c.FindLowPeers() {
+		for i := len(peer.Peers); i < PeerMinPeers; i++ {
+			lcPeers = append(lcPeers, peer)
+		}
+	}
+	log.WithFields(log.Fields{"controller": c, "func": "ConnectLowPeers"}).Infof("Found %d peers with not enough peers", len(lcPeers))
+	//Shuffle peers
+	rand.Shuffle(len(lcPeers), func(i, j int) {
+		lcPeers[i], lcPeers[j] = lcPeers[j], lcPeers[i]
+	})
+
+	//Left-over peers
+	var loPeers []*Peer
+
+	//Make the slice an even number
+	if len(lcPeers)%2 == 1 {
+		loPeers = append(loPeers, lcPeers[0])
+		lcPeers = lcPeers[1:]
+	}
+
+	//Match peers two-by-two
+	for i := 0; i < len(lcPeers); i += 2 {
+		if !lcPeers[i].CanPeer(lcPeers[i+1]) {
+			log.WithFields(log.Fields{"controller": c, "func": "ConnectLowPeers", "peer": lcPeers[i]}).Info("Pair cannot be peered")
+			loPeers = append(loPeers, lcPeers[i], lcPeers[i+1])
+			continue
+		}
+
+		log.WithFields(log.Fields{"controller": c, "func": "ConnectLowPeers"}).Infof("Connecting peers %v and %v", lcPeers[i], lcPeers[i+1])
+		lcPeers[i].SendPeeringRequest(lcPeers[i+1].Config)
+		/*Store peering temporarily, otherwise we would have to wait until the
+		next scan.
+		*/
+		lcPeers[i].Peers = append(lcPeers[i].Peers, lcPeers[i+1])
+		lcPeers[i+1].Peers = append(lcPeers[i].Peers, lcPeers[i])
+	}
+
+	/*Matching left-over peers with a random know peer
+
+	There is still a potential for collision (peer matching with itself),
+	however, we voluntarily disregard it at this step.
+	*/
+	if len(loPeers) > 0 {
+		//Transform c.Peers into a slice
+		var peers []*Peer
+		c.Peers.Range(func(_, value interface{}) bool {
+			peer, ok := value.(*Peer)
+			if !ok {
+				log.WithFields(log.Fields{"controller": c, "func": "ScanPeers", "peer": peer}).Warn("Failed to assert peer")
+				return true
+			}
+			peers = append(peers, peer)
+			return true
+		})
+
+		for _, peer := range loPeers {
+			oPeer := peers[rand.Intn(len(peers))]
+			peer.SendPeeringRequest(oPeer.Config)
+			//Pre-emptively add peering in memory.
+			peer.Peers = append(peer.Peers, oPeer)
+			oPeer.Peers = append(oPeer.Peers, oPeer)
+		}
+	}
+}
+
 /*FindClusters look at all peers known to the controller and returns the Config
 of peers in separate slices if they are not connected.
 
@@ -120,14 +200,14 @@ func (c *Controller) FindClusters() [][]*Peer {
 	return clusters
 }
 
-/*FindLowConnectedPeers parse through the list of peers and return those who
+/*FindLowPeers parse through the list of peers and return those who
 have less than PeerMinPeers peers.
 */
-func (c *Controller) FindLowConnectedPeers() (lcPeers []*Peer) {
+func (c *Controller) FindLowPeers() (lcPeers []*Peer) {
 	c.Peers.Range(func(_, value interface{}) bool {
 		peer, ok := value.(*Peer)
 		if !ok {
-			log.WithFields(log.Fields{"controller": c, "func": "FindLowConnectedPeers", "peer": peer}).Warn("Failed to assert peer")
+			log.WithFields(log.Fields{"controller": c, "func": "FindLowPeers", "peer": peer}).Warn("Failed to assert peer")
 			return true
 		}
 
@@ -317,69 +397,8 @@ func (c *Controller) scanWorker() {
 		//Merge clusters
 		c.MergeClusters(clusters)
 
-		/*Find peers with less than PeerMinPeers peers and connect them
-		together
-
-		To do so, we duplicate peers based on the number of missing
-		connections, shuffle the slice, then pair them two by two.
-
-		Peers that did not find a match, either because the number of peers in
-		the slice was odd or because they ended up matched with themselves, are
-		paired with random peers in the network.
-		*/
-		var lcPeers []*Peer
-		for _, peer := range c.FindLowConnectedPeers() {
-			for i := len(peer.Peers); i < PeerMinPeers; i++ {
-				lcPeers = append(lcPeers, peer)
-			}
-		}
-		log.WithFields(log.Fields{"controller": c, "func": "scanWorker"}).Infof("Found %d peers with not enough peers", len(lcPeers))
-		rand.Shuffle(len(lcPeers), func(i, j int) {
-			lcPeers[i], lcPeers[j] = lcPeers[j], lcPeers[i]
-		})
-
-		//Left-over peers
-		var loPeers []*Peer
-
-		//Make the slice an odd number
-		if len(lcPeers)%2 == 1 {
-			loPeers = append(loPeers, lcPeers[0])
-			lcPeers = lcPeers[1:]
-		}
-
-		//Match peers two-by-two
-		for i := 0; i < len(lcPeers); i += 2 {
-			if lcPeers[i].Config == lcPeers[i+1].Config {
-				log.WithFields(log.Fields{"controller": c, "func": "scanWorker", "peer": lcPeers[i]}).Info("Found duplicate peer")
-				loPeers = append(loPeers, lcPeers[i], lcPeers[i+1])
-			} else {
-				log.WithFields(log.Fields{"controller": c, "func": "scanWorker"}).Infof("Connecting peers %v and %v", lcPeers[i], lcPeers[i+1])
-				lcPeers[i].SendPeeringRequest(lcPeers[i+1].Config)
-			}
-		}
-
-		/*Matching left-over peers with a random know peer
-
-		There is still a potential for collision (peer matching with itself),
-		however, we voluntarily disregard it at this step.
-		*/
-		if len(loPeers) > 0 {
-			//Transform c.Peers into a slice
-			var peers []*Peer
-			c.Peers.Range(func(_, value interface{}) bool {
-				peer, ok := value.(*Peer)
-				if !ok {
-					log.WithFields(log.Fields{"controller": c, "func": "ScanPeers", "peer": peer}).Warn("Failed to assert peer")
-					return true
-				}
-				peers = append(peers, peer)
-				return true
-			})
-
-			for _, peer := range loPeers {
-				peer.SendPeeringRequest(peers[rand.Intn(len(peers))].Config)
-			}
-		}
+		//Connect nodes with less than PeerMinPeers peers.
+		c.ConnectLowPeers()
 	}
 }
 
