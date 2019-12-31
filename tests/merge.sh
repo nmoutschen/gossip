@@ -10,16 +10,27 @@ function ctrl_c() {
 
 export NODE_PIDS=""
 
+# Start nodes
 pushd ./node/
-for i in {8080..8089}; do GOSSIP_PORT=$i go run . &>/dev/null & export NODE_PIDS="$NODE_PIDS $!"; done
+for i in {8080..8089}; do
+    GOSSIP_PORT=$i go run . &>/dev/null & export NODE_PIDS="$NODE_PIDS $!"
+done
 popd
 echo "\$NODE_PIDS=$NODE_PIDS"
+
+# Start controller
 pushd ./control/
 go run . &
 export CONTROL_PID=$!
 echo "\$CONTROL_PID=$CONTROL_PID"
 popd
-sleep 5
-for i in {8080..8089}; do curl -X POST -d '{"ip": "127.0.0.1", "port": '$i'}' http://127.0.0.1:7080/peers; done
+
+# Send peers to controller
+while ! nc -vz localhost 7080; do
+    sleep 1
+done
+for i in {8080..8089}; do
+    curl -X POST -d '{"ip": "127.0.0.1", "port": '$i'}' http://127.0.0.1:7080/peers
+done
 
 while true; do sleep 5; done
