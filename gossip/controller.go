@@ -82,7 +82,7 @@ func (c *Controller) ConnectLowPeers() {
 		}
 
 		log.WithFields(log.Fields{"controller": c, "func": "ConnectLowPeers"}).Infof("Connecting peers %v and %v", lcPeers[i], lcPeers[i+1])
-		lcPeers[i].SendPeeringRequest(lcPeers[i+1].Config)
+		go lcPeers[i].SendPeeringRequest(lcPeers[i+1].Config)
 		/*Store peering temporarily, otherwise we would have to wait until the
 		next scan.
 		*/
@@ -110,7 +110,7 @@ func (c *Controller) ConnectLowPeers() {
 
 		for _, peer := range loPeers {
 			oPeer := peers[rand.Intn(len(peers))]
-			peer.SendPeeringRequest(oPeer.Config)
+			go peer.SendPeeringRequest(oPeer.Config)
 			//Pre-emptively add peering in memory.
 			peer.Peers = append(peer.Peers, oPeer)
 			oPeer.Peers = append(oPeer.Peers, oPeer)
@@ -272,7 +272,7 @@ func (c *Controller) MergeClusters(clusters [][]*Peer) {
 				break
 			}
 			log.WithFields(log.Fields{"controller": c, "func": "MergeClusters"}).Infof("Connecting peers %v and %v", origs[i], clusters[dPos][d])
-			origs[i].SendPeeringRequest(clusters[dPos][d].Config)
+			go origs[i].SendPeeringRequest(clusters[dPos][d].Config)
 			/*Manually add the peers together, even though there is no proof
 			that the peering was successful at this team. It is necessary to do
 			this for the identification of nodes with less than PeerMinPeers
