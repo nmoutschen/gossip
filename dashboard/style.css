@@ -1,0 +1,15 @@
+body {
+    padding: 0px;
+    margin: 0px;
+    overflow: hidden;
+}
+
+#header {
+    width: 100vw;
+    height: 20vh;
+}
+
+#graph {
+    width: 100vw;
+    height: 80vh;
+}
