@@ -296,7 +296,9 @@ func TestNodeUpdateState(t *testing.T) {
 		{State{1, ""}, false},
 		{origState, false},
 		{State{origState.Timestamp + 1, "New state"}, true},
-		{State{0, "Data"}, true},
+		//This test case may fail due to time.Now() resolution being too low on
+		//some systems.
+		//{State{0, "Data"}, true},
 	}
 
 	for i, testCase := range testCases {
