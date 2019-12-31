@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 )
@@ -268,12 +267,10 @@ func TestControllerRemovePeerWorker(t *testing.T) {
 	}
 }
 
-func TestControllerScanPeer(t *testing.T) {
+func TestControllerScanPeers(t *testing.T) {
 	//Setup
 	peer := NewPeer(Config{"127.0.0.1", 80})
 	c := NewController("127.0.0.1", 7080)
-	scanned := &sync.Map{}
-	wg := &sync.WaitGroup{}
 	var received bool
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
@@ -292,18 +289,21 @@ func TestControllerScanPeer(t *testing.T) {
 	peer.Config = parseURL(testServer.URL)
 	c.Peers.Store(peer.Config, peer)
 
-	wg.Add(1)
-	go c.scanPeer(peer, scanned, wg)
-	wg.Wait()
+	c.ScanPeers()
 
 	if !received {
 		t.Errorf("HTTP Server never received a request")
 	}
-	if _, ok := scanned.Load(peer.Config); !ok {
-		t.Errorf("Peer %v not scanned", peer)
-	}
 
 	if len(peer.Peers) != 1 {
 		t.Errorf("len(peer.Peers) == %d; want %d", len(peer.Peers), 1)
+	}
+	var lenPeers int
+	c.Peers.Range(func(_, _ interface{}) bool {
+		lenPeers++
+		return true
+	})
+	if lenPeers != 1 {
+		t.Errorf("lenPeers == %d; want %d", lenPeers, 1)
 	}
 }
