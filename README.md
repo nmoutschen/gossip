@@ -3,6 +3,10 @@ Experimentation with gossip protocols
 
 This repository contains a sample implementation of a gossip protocol for experimentation purposes.
 
+<p align="center">
+  <img alt="Screenshot of the dashboard with 10 nodes" src="images/dashboard.png"/>
+</p>
+
 __DISCLAIMER__: this repository is for experimentation purposes only with the goal of learning about and playing with gossip protocols. This is not and will not be production-ready at any point in time. Do not use this in production.
 
 * [Usage](#usage)
