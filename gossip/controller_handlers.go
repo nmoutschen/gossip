@@ -9,10 +9,13 @@ import (
 
 //peersHandler handles requests to '/peers'
 func (c *Controller) peersHandler(w http.ResponseWriter, r *http.Request) {
+	corsHeadersResponse(&w, r, "GET, POST")
 	if r.Method == http.MethodGet {
 		c.peersGetHandler(w, r)
 	} else if r.Method == http.MethodPost {
 		c.peersPostHandler(w, r)
+	} else if r.Method == http.MethodOptions {
+		corsOptionsResponse(w, r, "GET, POST")
 	} else {
 		methodNotAllowedHandler(w, r)
 	}

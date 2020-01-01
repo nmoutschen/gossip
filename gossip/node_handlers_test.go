@@ -60,6 +60,21 @@ func TestNodePeersHandlerPost(t *testing.T) {
 	}
 }
 
+func TestNodePeersHandlerOptions(t *testing.T) {
+	//Prepare peer and node
+	n := NewNode("127.0.0.1", 8080)
+
+	//Send request
+	req := httptest.NewRequest("OPTIONS", "http://127.0.0.1:8080/peers", nil)
+	w := httptest.NewRecorder()
+	n.peersHandler(w, req)
+	res := w.Result()
+
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
+	}
+}
+
 func TestNodeRootHandlerGet(t *testing.T) {
 	//Prepare state and node
 	state := State{time.Now().UnixNano(), "Test data"}
@@ -109,6 +124,21 @@ func TestNodeRootHandlerPost(t *testing.T) {
 	}
 }
 
+func TestNodeRootHandlerOptions(t *testing.T) {
+	//Prepare peer and node
+	n := NewNode("127.0.0.1", 8080)
+
+	//Send request
+	req := httptest.NewRequest("OPTIONS", "http://127.0.0.1:8080", nil)
+	w := httptest.NewRecorder()
+	n.rootHandler(w, req)
+	res := w.Result()
+
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
+	}
+}
+
 func TestNodeStatusHandlerGet(t *testing.T) {
 	//Prepare state and node
 	state := State{time.Now().UnixNano(), "Test data"}
@@ -127,5 +157,20 @@ func TestNodeStatusHandlerGet(t *testing.T) {
 
 	if sr.LastState != state.Timestamp {
 		t.Errorf("sr.LastState == %d; want %d", sr.LastState, state.Timestamp)
+	}
+}
+
+func TestNodeStatusHandlerOptions(t *testing.T) {
+	//Prepare peer and node
+	n := NewNode("127.0.0.1", 8080)
+
+	//Send request
+	req := httptest.NewRequest("OPTIONS", "http://127.0.0.1:8080/status", nil)
+	w := httptest.NewRecorder()
+	n.statusHandler(w, req)
+	res := w.Result()
+
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
 	}
 }

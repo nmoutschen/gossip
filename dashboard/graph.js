@@ -8,9 +8,9 @@ function fetchData(url, callback) {
     var xmlhttp = new XMLHttpRequest();
     xmlhttp.open("GET", url+"/peers", null);
     xmlhttp.onreadystatechange = function() {
-        console.log("RDS", xmlhttp.readyState);
         if (xmlhttp.readyState == 4) {
             if(xmlhttp.status == 200) {
+                console.log(xmlhttp.responseText);
                 data = JSON.parse(xmlhttp.responseText);
                 callback(data);
             }
@@ -24,25 +24,29 @@ function parseData(data) {
     var edges = [];
     var analyzed = [];
 
-    data["nodes"].forEach(function(node, i, _) {
-        config = toString(node["config"]);
+    if (data["nodes"] !== null) {
+        data["nodes"].forEach(function(node, i, _) {
+            config = toString(node["config"]);
 
-        nodes.push({
-            id: config,
-            label: config
-        });
+            nodes.push({
+                id: config,
+                label: config
+            });
 
-        node["peers"].forEach(function(peer, j, _) {
-            if (!analyzed.includes(toString(peer))) {
-                edges.push({
-                    from: config,
-                    to: toString(peer)
+            if (node["peers"] !== null) {
+                node["peers"].forEach(function(peer, j, _) {
+                    if (!analyzed.includes(toString(peer))) {
+                        edges.push({
+                            from: config,
+                            to: toString(peer)
+                        });
+                    }
                 });
             }
-        });
 
-        analyzed.push(toString(node["config"]));
-    });
+            analyzed.push(toString(node["config"]));
+        });
+    }
 
     return {
         nodes: new vis.DataSet(nodes),

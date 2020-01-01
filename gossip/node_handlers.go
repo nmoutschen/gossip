@@ -9,10 +9,13 @@ import (
 
 //peersHandler handles requests to the '/peers' path
 func (n *Node) peersHandler(w http.ResponseWriter, r *http.Request) {
+	corsHeadersResponse(&w, r, "GET, POST")
 	if r.Method == http.MethodGet {
 		n.peersGetHandler(w, r)
 	} else if r.Method == http.MethodPost {
 		n.peersPostHandler(w, r)
+	} else if r.Method == http.MethodOptions {
+		corsOptionsResponse(w, r, "GET, POST")
 	} else {
 		methodNotAllowedHandler(w, r)
 	}
@@ -47,10 +50,13 @@ func (n *Node) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 
 //rootHandler handles requests to the '/' path
 func (n *Node) rootHandler(w http.ResponseWriter, r *http.Request) {
+	corsHeadersResponse(&w, r, "GET, POST")
 	if r.Method == http.MethodGet {
 		n.rootGetHandler(w, r)
 	} else if r.Method == http.MethodPost {
 		n.rootPostHandler(w, r)
+	} else if r.Method == http.MethodOptions {
+		corsOptionsResponse(w, r, "GET, POST")
 	} else {
 		methodNotAllowedHandler(w, r)
 	}
@@ -80,7 +86,11 @@ func (n *Node) rootPostHandler(w http.ResponseWriter, r *http.Request) {
 
 //statusHandler handles requests to '/status'
 func (n *Node) statusHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	corsHeadersResponse(&w, r, "GET")
+	if r.Method == http.MethodOptions {
+		corsOptionsResponse(w, r, "GET")
+		return
+	} else if r.Method != http.MethodGet {
 		log.WithFields(log.Fields{"node": n, "func": "statusHandler"}).Info("Received GET /status")
 		methodNotAllowedHandler(w, r)
 		return
