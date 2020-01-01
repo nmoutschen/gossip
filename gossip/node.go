@@ -26,12 +26,9 @@ type Node struct {
 }
 
 //NewNode creates a new Node
-func NewNode(ip string, port int) *Node {
+func NewNode(addr Addr) *Node {
 	n := &Node{
-		Addr: Addr{
-			IP:   ip,
-			Port: port,
-		},
+		Addr: addr,
 
 		fetchStateChan: make(chan *Peer, 8),
 		addPeerChan:    make(chan Addr, 8),

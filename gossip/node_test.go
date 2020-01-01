@@ -10,7 +10,7 @@ import (
 
 func TestNewNode(t *testing.T) {
 	addr := Addr{"127.0.0.1", 8080}
-	n := NewNode(addr.IP, addr.Port)
+	n := NewNode(addr)
 
 	if n.Addr != addr {
 		t.Errorf("n.Addr == %v; want %v", n.Addr, addr)
@@ -18,7 +18,7 @@ func TestNewNode(t *testing.T) {
 }
 
 func TestNodeAddPeer(t *testing.T) {
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 	addr := Addr{"127.0.0.1", 8081}
 
 	// Test if the node skips itself
@@ -52,7 +52,7 @@ func TestNodeAddPeer(t *testing.T) {
 }
 
 func TestNodeFindPeer(t *testing.T) {
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 
 	peer1 := NewPeer(Addr{"127.0.0.1", 8081})
 	peer2 := NewPeer(Addr{"127.0.0.1", 8082})
@@ -105,7 +105,7 @@ func TestNodeFetchStateWorker(t *testing.T) {
 	peer := NewPeer(parseURL(testServer.URL))
 	peer.LastState = state.Timestamp
 
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 	n.Peers = append(n.Peers, peer)
 
 	go n.fetchStateWorker()
@@ -149,7 +149,7 @@ func TestNodePeerSendStateWorker(t *testing.T) {
 	peer := NewPeer(parseURL(testServer.URL))
 
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 
 	for i, testCase := range testCases {
 		for i := 0; i < testCase.Recipients; i++ {
@@ -199,7 +199,7 @@ func TestNodePingPeers(t *testing.T) {
 	peer.Addr = parseURL(testServer.URL)
 
 	//Initialize node
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 	n.Peers = append(n.Peers, peer)
 
 	//Ping all peers
@@ -244,7 +244,7 @@ func TestNodePingPeersUnreachable(t *testing.T) {
 	peer.Addr = parseURL(testServer.URL)
 
 	//Initialize node
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 	n.Peers = append(n.Peers, peer)
 
 	//Ping all peers
@@ -271,7 +271,7 @@ func TestNodePingPeersUnreachable(t *testing.T) {
 
 func TestNodeStateWorker(t *testing.T) {
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 
 	go n.stateWorker()
 	n.stateChan <- state
@@ -302,7 +302,7 @@ func TestNodeUpdateState(t *testing.T) {
 	}
 
 	for i, testCase := range testCases {
-		n := NewNode("127.0.0.1", 8080)
+		n := NewNode(Addr{"127.0.0.1", 8080})
 		n.UpdateState(origState)
 		updated := n.UpdateState(testCase.State)
 

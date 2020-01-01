@@ -11,7 +11,10 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	control := gossip.NewController(getIP(), getPort())
+	control := gossip.NewController(gossip.Addr{
+		IP:   getIP(),
+		Port: getPort(),
+	})
 	control.Run()
 }
 

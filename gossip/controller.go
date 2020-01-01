@@ -22,12 +22,9 @@ type Controller struct {
 }
 
 //NewController creates a new controller instance
-func NewController(ip string, port int) *Controller {
+func NewController(addr Addr) *Controller {
 	c := &Controller{
-		Addr: Addr{
-			IP:   ip,
-			Port: port,
-		},
+		Addr:  addr,
 		Peers: &sync.Map{},
 
 		addPeerChan: make(chan Addr, 8),
