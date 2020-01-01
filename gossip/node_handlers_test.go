@@ -11,8 +11,8 @@ import (
 
 func TestNodePeersHandlerGet(t *testing.T) {
 	//Prepare peer and node
-	peer := NewPeer(Config{"127.0.0.1", 8081})
-	n := NewNode("127.0.0.1", 8080)
+	peer := NewPeer(Addr{"127.0.0.1", 8081})
+	n := NewNode(Addr{"127.0.0.1", 8080})
 	n.Peers = append(n.Peers, peer)
 
 	//Send request
@@ -31,16 +31,16 @@ func TestNodePeersHandlerGet(t *testing.T) {
 
 	if len(pr.Peers) != 1 {
 		t.Errorf("len(pr.Peers) == %d; want %d", len(pr.Peers), 1)
-	} else if pr.Peers[0] != peer.Config {
-		t.Errorf("pr.Peers[1] == %v; want %v", pr.Peers[0], peer.Config)
+	} else if pr.Peers[0] != peer.Addr {
+		t.Errorf("pr.Peers[1] == %v; want %v", pr.Peers[0], peer.Addr)
 	}
 }
 
 func TestNodePeersHandlerPost(t *testing.T) {
-	//Prepare config and node
-	config := Config{"127.0.0.1", 8081}
-	n := NewNode("127.0.0.1", 8080)
-	reqBody, _ := json.Marshal(config)
+	//Prepare address and node
+	addr := Addr{"127.0.0.1", 8081}
+	n := NewNode(Addr{"127.0.0.1", 8080})
+	reqBody, _ := json.Marshal(addr)
 
 	//Send request
 	req := httptest.NewRequest("POST", "http://127.0.0.1:8080/peers", bytes.NewBuffer(reqBody))
@@ -52,17 +52,17 @@ func TestNodePeersHandlerPost(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
 	} else {
-		rConfig := <-n.addPeerChan
+		rAddr := <-n.addPeerChan
 
-		if rConfig != config {
-			t.Errorf("rConfig == %v; want %v", rConfig, config)
+		if rAddr != addr {
+			t.Errorf("rAddr == %v; want %v", rAddr, addr)
 		}
 	}
 }
 
 func TestNodePeersHandlerOptions(t *testing.T) {
 	//Prepare peer and node
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 
 	//Send request
 	req := httptest.NewRequest("OPTIONS", "http://127.0.0.1:8080/peers", nil)
@@ -78,7 +78,7 @@ func TestNodePeersHandlerOptions(t *testing.T) {
 func TestNodeRootHandlerGet(t *testing.T) {
 	//Prepare state and node
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 	n.State = state
 
 	//Send request
@@ -103,7 +103,7 @@ func TestNodeRootHandlerGet(t *testing.T) {
 func TestNodeRootHandlerPost(t *testing.T) {
 	//Prepare state and node
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 	reqBody, _ := json.Marshal(state)
 
 	//Send request
@@ -126,7 +126,7 @@ func TestNodeRootHandlerPost(t *testing.T) {
 
 func TestNodeRootHandlerOptions(t *testing.T) {
 	//Prepare peer and node
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 
 	//Send request
 	req := httptest.NewRequest("OPTIONS", "http://127.0.0.1:8080", nil)
@@ -142,7 +142,7 @@ func TestNodeRootHandlerOptions(t *testing.T) {
 func TestNodeStatusHandlerGet(t *testing.T) {
 	//Prepare state and node
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 	n.State = state
 
 	//Send request
@@ -162,7 +162,7 @@ func TestNodeStatusHandlerGet(t *testing.T) {
 
 func TestNodeStatusHandlerOptions(t *testing.T) {
 	//Prepare peer and node
-	n := NewNode("127.0.0.1", 8080)
+	n := NewNode(Addr{"127.0.0.1", 8080})
 
 	//Send request
 	req := httptest.NewRequest("OPTIONS", "http://127.0.0.1:8080/status", nil)

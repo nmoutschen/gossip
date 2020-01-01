@@ -11,14 +11,14 @@ import (
 
 //Node represents the management unit for this node
 type Node struct {
-	Config Config  `json:"config"`
-	Peers  []*Peer `json:"peers"`
-	State  State   `json:"state"`
+	Addr  Addr    `json:"addr"`
+	Peers []*Peer `json:"peers"`
+	State State   `json:"state"`
 
 	//fetchStateChan is a channel to force fetch updates from other peers
 	fetchStateChan chan *Peer
 	//addPeerChan is a channel to receive peering requests
-	addPeerChan chan Config
+	addPeerChan chan Addr
 	//peerStateChan is a channel to receive state updates that need to be propagated to peers
 	peerStateChan chan State
 	//stateChan is a channel to receive state updates
@@ -26,15 +26,12 @@ type Node struct {
 }
 
 //NewNode creates a new Node
-func NewNode(ip string, port int) *Node {
+func NewNode(addr Addr) *Node {
 	n := &Node{
-		Config: Config{
-			IP:   ip,
-			Port: port,
-		},
+		Addr: addr,
 
 		fetchStateChan: make(chan *Peer, 8),
-		addPeerChan:    make(chan Config, 8),
+		addPeerChan:    make(chan Addr, 8),
 		peerStateChan:  make(chan State, 8),
 		stateChan:      make(chan State, 8),
 	}
@@ -44,38 +41,38 @@ func NewNode(ip string, port int) *Node {
 	return n
 }
 
-//AddPeer adds a new peer if there are no known peers with the same Config
-func (n *Node) AddPeer(config Config) {
-	log.WithFields(log.Fields{"node": n, "config": config, "func": "addPeerWorker"}).Info("Received peering request")
+//AddPeer adds a new peer if there are no known peers with the same Addr
+func (n *Node) AddPeer(addr Addr) {
+	log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Received peering request")
 
 	//Skip if self.
-	if config == n.Config {
-		log.WithFields(log.Fields{"node": n, "config": config, "func": "addPeerWorker"}).Info("Skip self-peering request")
+	if addr == n.Addr {
+		log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Skip self-peering request")
 		return
 	}
 
 	//Skip if already known.
-	if _, found := n.FindPeer(config); found {
-		log.WithFields(log.Fields{"node": n, "config": config, "func": "addPeerWorker"}).Info("Skip known peer")
+	if _, found := n.FindPeer(addr); found {
+		log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Skip known peer")
 		return
 	}
 
 	//Add the peer to the list of known peers.
 	peer := &Peer{
-		Config: config,
+		Addr: addr,
 	}
 	n.Peers = append(n.Peers, peer)
 
 	//Send a peering request.
-	go peer.SendPeeringRequest(n.Config)
+	go peer.SendPeeringRequest(n.Addr)
 }
 
 /*FindPeer looks up known peers and returns if there is a peer matching the
-Config provided.
+Addr provided.
 */
-func (n *Node) FindPeer(config Config) (int, bool) {
+func (n *Node) FindPeer(addr Addr) (int, bool) {
 	for pos, peer := range n.Peers {
-		if peer.Config == config {
+		if peer.Addr == addr {
 			return pos, true
 		}
 	}
@@ -173,12 +170,12 @@ func (n *Node) Run() {
 
 	//Run HTTP server
 	log.WithFields(log.Fields{"node": n, "func": "Run"}).Info("Starting node")
-	log.WithFields(log.Fields{"node": n, "func": "Run"}).Fatal(http.ListenAndServe(n.Config.String(), nil))
+	log.WithFields(log.Fields{"node": n, "func": "Run"}).Fatal(http.ListenAndServe(n.Addr.String(), nil))
 }
 
-//String returns a string representation of the configuration
+//String returns a string representation of the address of the node
 func (n Node) String() string {
-	return n.Config.String()
+	return n.Addr.String()
 }
 
 /*UpdateState updates the internal state if it is older than the proposed
@@ -230,7 +227,7 @@ func (n *Node) fetchStateWorker() {
 	}
 }
 
-/*addPeerWorker waits for new configs on the n.addPeerChan channel and process
+/*addPeerWorker waits for new Addrs on the n.addPeerChan channel and process
 them.
 
 If the node is known, there is no need to do anything, so the message can
@@ -246,8 +243,8 @@ network.
 */
 func (n *Node) addPeerWorker() {
 	for {
-		config := <-n.addPeerChan
-		n.AddPeer(config)
+		addr := <-n.addPeerChan
+		n.AddPeer(addr)
 	}
 }
 

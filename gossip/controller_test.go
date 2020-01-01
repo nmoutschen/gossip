@@ -9,16 +9,16 @@ import (
 )
 
 func TestControllerAddPeerWorker(t *testing.T) {
-	config := Config{"127.0.0.1", 8080}
-	c := NewController("127.0.0.1", 7080)
+	addr := Addr{"127.0.0.1", 8080}
+	c := NewController(Addr{"127.0.0.1", 7080})
 	go c.addPeerWorker()
 
 	//Add a peer
-	c.addPeerChan <- config
+	c.addPeerChan <- addr
 	time.Sleep(100 * time.Millisecond)
 
-	if _, ok := c.Peers.Load(config); !ok {
-		t.Errorf("Peer %v not found in c.Peers", config)
+	if _, ok := c.Peers.Load(addr); !ok {
+		t.Errorf("Peer %v not found in c.Peers", addr)
 	}
 	var pLength int
 	c.Peers.Range(func(_, _ interface{}) bool {
@@ -30,11 +30,11 @@ func TestControllerAddPeerWorker(t *testing.T) {
 	}
 
 	//Test idempotence, a peer should not be added twice
-	c.addPeerChan <- config
+	c.addPeerChan <- addr
 	time.Sleep(100 * time.Millisecond)
 
-	if _, ok := c.Peers.Load(config); !ok {
-		t.Errorf("Peer %v not found in c.Peers", config)
+	if _, ok := c.Peers.Load(addr); !ok {
+		t.Errorf("Peer %v not found in c.Peers", addr)
 	}
 	pLength = 0
 	c.Peers.Range(func(_, _ interface{}) bool {
@@ -49,13 +49,13 @@ func TestControllerAddPeerWorker(t *testing.T) {
 func TestControllerFindClustersStar(t *testing.T) {
 	//Create peers
 	peers := []*Peer{
-		NewPeer(Config{"127.0.0.1", 8080}),
-		NewPeer(Config{"127.0.0.1", 8081}),
-		NewPeer(Config{"127.0.0.1", 8082}),
-		NewPeer(Config{"127.0.0.1", 8083}),
-		NewPeer(Config{"127.0.0.1", 8084}),
-		NewPeer(Config{"127.0.0.1", 8085}),
-		NewPeer(Config{"127.0.0.1", 8086}),
+		NewPeer(Addr{"127.0.0.1", 8080}),
+		NewPeer(Addr{"127.0.0.1", 8081}),
+		NewPeer(Addr{"127.0.0.1", 8082}),
+		NewPeer(Addr{"127.0.0.1", 8083}),
+		NewPeer(Addr{"127.0.0.1", 8084}),
+		NewPeer(Addr{"127.0.0.1", 8085}),
+		NewPeer(Addr{"127.0.0.1", 8086}),
 	}
 
 	//Create network structure
@@ -75,9 +75,9 @@ func TestControllerFindClustersStar(t *testing.T) {
 	peers[6].Peers = []*Peer{peers[3]}
 
 	//Create controller
-	c := NewController("127.0.0.1", 7080)
+	c := NewController(Addr{"127.0.0.1", 7080})
 	for _, peer := range peers {
-		c.Peers.Store(peer.Config, peer)
+		c.Peers.Store(peer.Addr, peer)
 	}
 
 	//Analyze clusters
@@ -96,12 +96,12 @@ func TestControllerFindClustersStar(t *testing.T) {
 func TestControllerFindClustersTwoTriangles(t *testing.T) {
 	//Create peers
 	peers := []*Peer{
-		NewPeer(Config{"127.0.0.1", 8080}),
-		NewPeer(Config{"127.0.0.1", 8081}),
-		NewPeer(Config{"127.0.0.1", 8082}),
-		NewPeer(Config{"127.0.0.1", 8083}),
-		NewPeer(Config{"127.0.0.1", 8084}),
-		NewPeer(Config{"127.0.0.1", 8085}),
+		NewPeer(Addr{"127.0.0.1", 8080}),
+		NewPeer(Addr{"127.0.0.1", 8081}),
+		NewPeer(Addr{"127.0.0.1", 8082}),
+		NewPeer(Addr{"127.0.0.1", 8083}),
+		NewPeer(Addr{"127.0.0.1", 8084}),
+		NewPeer(Addr{"127.0.0.1", 8085}),
 	}
 
 	//Create network structure
@@ -113,9 +113,9 @@ func TestControllerFindClustersTwoTriangles(t *testing.T) {
 	peers[5].Peers = []*Peer{peers[3], peers[4]}
 
 	//Create controller
-	c := NewController("127.0.0.1", 7080)
+	c := NewController(Addr{"127.0.0.1", 7080})
 	for _, peer := range peers {
-		c.Peers.Store(peer.Config, peer)
+		c.Peers.Store(peer.Addr, peer)
 	}
 
 	//Analyze clusters
@@ -149,11 +149,11 @@ func TestControllerFindClustersTwoTriangles(t *testing.T) {
 func TestControllerFindLowPeersLine(t *testing.T) {
 	//Create peers
 	peers := []*Peer{
-		NewPeer(Config{"127.0.0.1", 8080}),
-		NewPeer(Config{"127.0.0.1", 8081}),
-		NewPeer(Config{"127.0.0.1", 8082}),
-		NewPeer(Config{"127.0.0.1", 8083}),
-		NewPeer(Config{"127.0.0.1", 8084}),
+		NewPeer(Addr{"127.0.0.1", 8080}),
+		NewPeer(Addr{"127.0.0.1", 8081}),
+		NewPeer(Addr{"127.0.0.1", 8082}),
+		NewPeer(Addr{"127.0.0.1", 8083}),
+		NewPeer(Addr{"127.0.0.1", 8084}),
 	}
 
 	//Create network structure
@@ -164,9 +164,9 @@ func TestControllerFindLowPeersLine(t *testing.T) {
 	peers[4].Peers = []*Peer{peers[3]}
 
 	//Create controller
-	c := NewController("127.0.0.1", 7080)
+	c := NewController(Addr{"127.0.0.1", 7080})
 	for _, peer := range peers {
-		c.Peers.Store(peer.Config, peer)
+		c.Peers.Store(peer.Addr, peer)
 	}
 
 	//Analyze peers
@@ -194,11 +194,11 @@ func TestControllerFindLowPeersLine(t *testing.T) {
 func TestControllerFindLowPeersStar(t *testing.T) {
 	//Create peers
 	peers := []*Peer{
-		NewPeer(Config{"127.0.0.1", 8080}),
-		NewPeer(Config{"127.0.0.1", 8081}),
-		NewPeer(Config{"127.0.0.1", 8082}),
-		NewPeer(Config{"127.0.0.1", 8083}),
-		NewPeer(Config{"127.0.0.1", 8084}),
+		NewPeer(Addr{"127.0.0.1", 8080}),
+		NewPeer(Addr{"127.0.0.1", 8081}),
+		NewPeer(Addr{"127.0.0.1", 8082}),
+		NewPeer(Addr{"127.0.0.1", 8083}),
+		NewPeer(Addr{"127.0.0.1", 8084}),
 	}
 
 	//Create network structure
@@ -209,9 +209,9 @@ func TestControllerFindLowPeersStar(t *testing.T) {
 	peers[4].Peers = []*Peer{peers[0]}
 
 	//Create controller
-	c := NewController("127.0.0.1", 7080)
+	c := NewController(Addr{"127.0.0.1", 7080})
 	for _, peer := range peers {
-		c.Peers.Store(peer.Config, peer)
+		c.Peers.Store(peer.Addr, peer)
 	}
 
 	//Analyze peers
@@ -221,7 +221,7 @@ func TestControllerFindLowPeersStar(t *testing.T) {
 		t.Errorf("len(lcPeers) == %d; want %d", len(lcPeers), len(peers)-1)
 	}
 	for _, peer := range lcPeers {
-		if peer.Config == peers[0].Config {
+		if peer.Addr == peers[0].Addr {
 			t.Errorf("Found %v in lcPeers", peer)
 		}
 	}
@@ -244,10 +244,10 @@ func TestControllerFindLowPeersStar(t *testing.T) {
 func TestControllerFindLowPeersFull(t *testing.T) {
 	//Create peers
 	peers := []*Peer{
-		NewPeer(Config{"127.0.0.1", 8080}),
-		NewPeer(Config{"127.0.0.1", 8081}),
-		NewPeer(Config{"127.0.0.1", 8082}),
-		NewPeer(Config{"127.0.0.1", 8083}),
+		NewPeer(Addr{"127.0.0.1", 8080}),
+		NewPeer(Addr{"127.0.0.1", 8081}),
+		NewPeer(Addr{"127.0.0.1", 8082}),
+		NewPeer(Addr{"127.0.0.1", 8083}),
 	}
 
 	//Create network structure
@@ -257,9 +257,9 @@ func TestControllerFindLowPeersFull(t *testing.T) {
 	peers[3].Peers = []*Peer{peers[0], peers[1], peers[2]}
 
 	//Create controller
-	c := NewController("127.0.0.1", 7080)
+	c := NewController(Addr{"127.0.0.1", 7080})
 	for _, peer := range peers {
-		c.Peers.Store(peer.Config, peer)
+		c.Peers.Store(peer.Addr, peer)
 	}
 
 	//Analyze peers
@@ -285,19 +285,19 @@ func TestControllerFindLowPeersFull(t *testing.T) {
 }
 
 func TestControllerRemovePeerWorker(t *testing.T) {
-	config := Config{"127.0.0.1", 8080}
-	c := NewController("127.0.0.1", 7080)
-	removePeerChan := make(chan Config)
+	addr := Addr{"127.0.0.1", 8080}
+	c := NewController(Addr{"127.0.0.1", 7080})
+	removePeerChan := make(chan Addr)
 	defer close(removePeerChan)
-	c.Peers.Store(config, NewPeer(config))
+	c.Peers.Store(addr, NewPeer(addr))
 
 	go c.removePeerWorker(removePeerChan)
-	removePeerChan <- config
+	removePeerChan <- addr
 	//TODO: Find a better solution to handle asynchronous operations.
 	time.Sleep(100 * time.Millisecond)
 
-	if _, ok := c.Peers.Load(config); ok {
-		t.Errorf("Peer %v found in c.Peers", config)
+	if _, ok := c.Peers.Load(addr); ok {
+		t.Errorf("Peer %v found in c.Peers", addr)
 	}
 	var pLength int
 	c.Peers.Range(func(_, _ interface{}) bool {
@@ -311,8 +311,8 @@ func TestControllerRemovePeerWorker(t *testing.T) {
 
 func TestControllerScanPeers(t *testing.T) {
 	//Setup
-	peer := NewPeer(Config{"127.0.0.1", 80})
-	c := NewController("127.0.0.1", 7080)
+	peer := NewPeer(Addr{"127.0.0.1", 80})
+	c := NewController(Addr{"127.0.0.1", 7080})
 	var received bool
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
@@ -324,12 +324,12 @@ func TestControllerScanPeers(t *testing.T) {
 		received = true
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(PeersResponse{
-			Peers: []Config{peer.Config},
+			Peers: []Addr{peer.Addr},
 		})
 	}))
 	defer func() { testServer.Close() }()
-	peer.Config = parseURL(testServer.URL)
-	c.Peers.Store(peer.Config, peer)
+	peer.Addr = parseURL(testServer.URL)
+	c.Peers.Store(peer.Addr, peer)
 
 	c.ScanPeers()
 

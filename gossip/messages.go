@@ -2,8 +2,8 @@ package gossip
 
 //CtrlPeerResponse is a single node as part of a CtrlPeersResponse struct.
 type CtrlPeerResponse struct {
-	Config Config   `json:"config"`
-	Peers  []Config `json:"peers"`
+	Addr  Addr   `json:"addr"`
+	Peers []Addr `json:"peers"`
 }
 
 //CtrlPeersResponse is the response sent for a /nodes request to a controller.
@@ -13,7 +13,7 @@ type CtrlPeersResponse struct {
 
 //PeersResponse is the response sent for a /peers request.
 type PeersResponse struct {
-	Peers []Config `json:"peers"`
+	Peers []Addr `json:"peers"`
 }
 
 //Response is the response sent to requests when an error occurs.

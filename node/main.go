@@ -11,7 +11,10 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	node := gossip.NewNode(getIP(), getPort())
+	node := gossip.NewNode(gossip.Addr{
+		IP:   getIP(),
+		Port: getPort(),
+	})
 	node.Run()
 }
 
