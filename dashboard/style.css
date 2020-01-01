@@ -2,11 +2,22 @@ body {
     padding: 0px;
     margin: 0px;
     overflow: hidden;
+
+    font-family: Montserrat, sans-serif;
+}
+
+h1 {
+    margin: 0px;
+    padding-bottom: 20px;
 }
 
 #header {
     width: 100vw;
-    height: 20vh;
+    height: 18vh;
+    padding: 1vh;
+    
+    background-color: #5F84F4;
+    color: #ffffff;
 }
 
 #graph {
