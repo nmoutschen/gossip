@@ -87,7 +87,7 @@ func (c *Controller) ConnectLowPeers() {
 		next scan.
 		*/
 		lcPeers[i].Peers = append(lcPeers[i].Peers, lcPeers[i+1])
-		lcPeers[i+1].Peers = append(lcPeers[i].Peers, lcPeers[i])
+		lcPeers[i+1].Peers = append(lcPeers[i+1].Peers, lcPeers[i])
 	}
 
 	/*Matching left-over peers with a random know peer
@@ -101,19 +101,24 @@ func (c *Controller) ConnectLowPeers() {
 		c.Peers.Range(func(_, value interface{}) bool {
 			peer, ok := value.(*Peer)
 			if !ok {
-				log.WithFields(log.Fields{"controller": c, "func": "ScanPeers", "peer": peer}).Warn("Failed to assert peer")
+				log.WithFields(log.Fields{"controller": c, "func": "ConnectLowPeers", "peer": peer}).Warn("Failed to assert peer")
 				return true
 			}
 			peers = append(peers, peer)
 			return true
 		})
 
+		//Random matching
 		for _, peer := range loPeers {
 			oPeer := peers[rand.Intn(len(peers))]
-			go peer.SendPeeringRequest(oPeer.Config)
-			//Pre-emptively add peering in memory.
-			peer.Peers = append(peer.Peers, oPeer)
-			oPeer.Peers = append(oPeer.Peers, oPeer)
+			if peer.CanPeer(oPeer) {
+				go peer.SendPeeringRequest(oPeer.Config)
+				//Pre-emptively add peering in memory.
+				peer.Peers = append(peer.Peers, oPeer)
+				oPeer.Peers = append(oPeer.Peers, peer)
+			} else {
+				log.WithFields(log.Fields{"controller": c, "func": "ConnectLowPeers", "peer": peer}).Info("Failed to find a random match")
+			}
 		}
 	}
 }
