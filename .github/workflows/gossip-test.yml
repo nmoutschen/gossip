@@ -3,9 +3,13 @@ on:
   push:
     branches:
       - master
+    paths:
+      - "gossip/**"
   pull_request:
     branches:
       - master
+    paths:
+      - "gossip/**"
 jobs:
   gossip-test:
     strategy:
