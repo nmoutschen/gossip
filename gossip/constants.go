@@ -10,6 +10,14 @@ const (
 	ControllerMaxPingDelay int64 = 60 * 60 //1 hour
 	//ControllerScanDelay is the delay between two scans from a controller instance
 	ControllerScanDelay time.Duration = 60 * time.Second
+	/*CorsAllowHeaders is used for the Access-Control-Allow-Headers header for
+	HTTP responses.
+	*/
+	CorsAllowHeaders string = "Accept, Content-Type, Content-Length, Accept-Encoding"
+	/*CorsAllowOrigin is used for the Access-Control-Allow-Origin header for
+	HTTP responses.
+	*/
+	CorsAllowOrigin string = "*"
 	//PeerBackoffDuration is the base duration before retrying to send a message to a peer
 	PeerBackoffDuration time.Duration = 200 * time.Millisecond
 	//PeerMaxAttempts is the number of attempts before considering the peer as unreachable
