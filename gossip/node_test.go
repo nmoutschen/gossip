@@ -9,74 +9,74 @@ import (
 )
 
 func TestNewNode(t *testing.T) {
-	config := Config{"127.0.0.1", 8080}
-	n := NewNode(config.IP, config.Port)
+	addr := Addr{"127.0.0.1", 8080}
+	n := NewNode(addr.IP, addr.Port)
 
-	if n.Config != config {
-		t.Errorf("n.Config == %v; want %v", n.Config, config)
+	if n.Addr != addr {
+		t.Errorf("n.Addr == %v; want %v", n.Addr, addr)
 	}
 }
 
 func TestNodeAddPeer(t *testing.T) {
 	n := NewNode("127.0.0.1", 8080)
-	config := Config{"127.0.0.1", 8081}
+	addr := Addr{"127.0.0.1", 8081}
 
 	// Test if the node skips itself
-	n.AddPeer(Config{"127.0.0.1", 8080})
+	n.AddPeer(Addr{"127.0.0.1", 8080})
 
 	if len(n.Peers) != 0 {
 		t.Errorf("len(n.Peers) == %d; want %d", len(n.Peers), 0)
 	}
 
-	//Adding one peer config
-	n.AddPeer(config)
+	//Adding one peer addr
+	n.AddPeer(addr)
 
 	//If all goes well, there should be one peer in n.Peers
 	if len(n.Peers) != 1 {
 		t.Errorf("len(n.Peers) == %d; want %d", len(n.Peers), 1)
 	}
-	if n.Peers[0].Config != config {
-		t.Errorf("n.Peers[0].Config == %v; want %v", n.Peers[0].Config, config)
+	if n.Peers[0].Addr != addr {
+		t.Errorf("n.Peers[0].Addr == %v; want %v", n.Peers[0].Addr, addr)
 	}
 
-	//Adding the same peer config
-	n.AddPeer(config)
+	//Adding the same peer address
+	n.AddPeer(addr)
 
-	//Since we are sending the same config, only one peer should be there
+	//Since we are sending the same addr, only one peer should be there
 	if len(n.Peers) != 1 {
 		t.Errorf("len(n.Peers) == %d; want %d", len(n.Peers), 1)
 	}
-	if n.Peers[0].Config != config {
-		t.Errorf("n.Peers[0].Config == %v; want %v", n.Peers[0].Config, config)
+	if n.Peers[0].Addr != addr {
+		t.Errorf("n.Peers[0].Addr == %v; want %v", n.Peers[0].Addr, addr)
 	}
 }
 
 func TestNodeFindPeer(t *testing.T) {
 	n := NewNode("127.0.0.1", 8080)
 
-	peer1 := NewPeer(Config{"127.0.0.1", 8081})
-	peer2 := NewPeer(Config{"127.0.0.1", 8082})
-	peer3 := NewPeer(Config{"127.0.0.1", 8083})
-	peer4 := NewPeer(Config{"127.0.0.1", 8084})
+	peer1 := NewPeer(Addr{"127.0.0.1", 8081})
+	peer2 := NewPeer(Addr{"127.0.0.1", 8082})
+	peer3 := NewPeer(Addr{"127.0.0.1", 8083})
+	peer4 := NewPeer(Addr{"127.0.0.1", 8084})
 
 	testCases := []struct {
-		Peers  []*Peer
-		Config Config
-		Pos    int
-		Found  bool
+		Peers []*Peer
+		Addr  Addr
+		Pos   int
+		Found bool
 	}{
-		{[]*Peer{}, peer1.Config, -1, false},
-		{[]*Peer{peer1}, peer1.Config, 0, true},
-		{[]*Peer{peer1}, peer2.Config, -1, false},
-		{[]*Peer{peer1, peer2, peer3}, peer1.Config, 0, true},
-		{[]*Peer{peer1, peer2, peer3}, peer2.Config, 1, true},
-		{[]*Peer{peer1, peer2, peer3}, peer3.Config, 2, true},
-		{[]*Peer{peer1, peer2, peer3}, peer4.Config, -1, false},
+		{[]*Peer{}, peer1.Addr, -1, false},
+		{[]*Peer{peer1}, peer1.Addr, 0, true},
+		{[]*Peer{peer1}, peer2.Addr, -1, false},
+		{[]*Peer{peer1, peer2, peer3}, peer1.Addr, 0, true},
+		{[]*Peer{peer1, peer2, peer3}, peer2.Addr, 1, true},
+		{[]*Peer{peer1, peer2, peer3}, peer3.Addr, 2, true},
+		{[]*Peer{peer1, peer2, peer3}, peer4.Addr, -1, false},
 	}
 
 	for i, testCase := range testCases {
 		n.Peers = testCase.Peers
-		pos, found := n.FindPeer(testCase.Config)
+		pos, found := n.FindPeer(testCase.Addr)
 		if pos != testCase.Pos {
 			t.Errorf("pos == %d for test case %d; want %d", pos, i, testCase.Pos)
 		}
@@ -196,7 +196,7 @@ func TestNodePingPeers(t *testing.T) {
 		})
 	}))
 	defer func() { testServer.Close() }()
-	peer.Config = parseURL(testServer.URL)
+	peer.Addr = parseURL(testServer.URL)
 
 	//Initialize node
 	n := NewNode("127.0.0.1", 8080)
@@ -241,7 +241,7 @@ func TestNodePingPeersUnreachable(t *testing.T) {
 		})
 	}))
 	defer func() { testServer.Close() }()
-	peer.Config = parseURL(testServer.URL)
+	peer.Addr = parseURL(testServer.URL)
 
 	//Initialize node
 	n := NewNode("127.0.0.1", 8080)

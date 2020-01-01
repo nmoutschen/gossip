@@ -26,7 +26,7 @@ func (n *Node) peersGetHandler(w http.ResponseWriter, r *http.Request) {
 	log.WithFields(log.Fields{"node": n, "func": "peersGetHandler"}).Info("Received GET /peers")
 	msg := PeersResponse{}
 	for _, peer := range n.Peers {
-		msg.Peers = append(msg.Peers, peer.Config)
+		msg.Peers = append(msg.Peers, peer.Addr)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -36,15 +36,15 @@ func (n *Node) peersGetHandler(w http.ResponseWriter, r *http.Request) {
 //peersPostHandler handles 'POST /peers' requests
 func (n *Node) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	log.WithFields(log.Fields{"node": n, "func": "peersPostHandler"}).Info("Received POST /peers")
-	config := &Config{}
+	addr := &Addr{}
 
-	if err := json.NewDecoder(r.Body).Decode(config); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(addr); err != nil {
 		log.WithFields(log.Fields{"node": n, "func": "peersPostHandler"}).Warn("Failed to decode request body")
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
 		return
 	}
 
-	n.addPeerChan <- *config
+	n.addPeerChan <- *addr
 	response(w, r, http.StatusOK, "Peering request received")
 }
 

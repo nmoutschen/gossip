@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -15,8 +14,8 @@ import (
 type Peer struct {
 	//Attempts is the number of unsuccessful attempts to reach the peer
 	Attempts int
-	//Config is the peer configuration, such as IP address and port number
-	Config Config
+	//Addr is the peer address, such as IP address and port number
+	Addr Addr
 	//LastState is the identifier for the last known data state for that peer
 	LastState int64
 	//LastSuccess is the timestamp in seconds when the last successful contact with the peer was made
@@ -26,18 +25,13 @@ type Peer struct {
 }
 
 //NewPeer creates a new Peer
-func NewPeer(config Config) *Peer {
+func NewPeer(addr Addr) *Peer {
 	p := &Peer{
-		Config:      config,
+		Addr:        addr,
 		LastSuccess: time.Now().Unix(),
 	}
 
 	return p
-}
-
-//Addr returns the address of the peer with the protocol
-func (p *Peer) Addr() string {
-	return fmt.Sprintf("%s://%s:%d", Protocol, p.Config.IP, p.Config.Port)
 }
 
 /*CanPeer returns whether this peer can connect with the target peer.
@@ -46,14 +40,14 @@ This will return false if this is the same peer or if they are already peered
 to each other.
 */
 func (p *Peer) CanPeer(tgt *Peer) bool {
-	if p.Config == tgt.Config {
+	if p.Addr == tgt.Addr {
 		log.WithFields(log.Fields{"peer": p, "func": "CanPeer"}).Info("Cannot peer with itself")
 		return false
 	}
 
 	for _, subPeer := range p.Peers {
-		if subPeer.Config == tgt.Config {
-			log.WithFields(log.Fields{"peer": p, "func": "CanPeer"}).Infof("Cannot peer with already peered node %v", tgt.Config)
+		if subPeer.Addr == tgt.Addr {
+			log.WithFields(log.Fields{"peer": p, "func": "CanPeer"}).Infof("Cannot peer with already peered node %v", tgt.Addr)
 			return false
 		}
 	}
@@ -63,7 +57,7 @@ func (p *Peer) CanPeer(tgt *Peer) bool {
 
 //Get retrieves the latest state from the peer
 func (p *Peer) Get() (State, error) {
-	res, err := http.Get(p.Addr())
+	res, err := http.Get(Protocol + "://" + p.Addr.String())
 	if err != nil || res.StatusCode != http.StatusOK {
 		log.WithFields(log.Fields{"peer": p, "func": "Get"}).Warn("Failed to retrieve the latest state")
 		p.UpdateStatus(false)
@@ -85,10 +79,10 @@ func (p *Peer) Get() (State, error) {
 
 /*GetPeers retrieves the peers of this peer.
  */
-func (p *Peer) GetPeers() ([]Config, error) {
-	res, err := http.Get(p.Addr() + "/peers")
+func (p *Peer) GetPeers() ([]Addr, error) {
+	res, err := http.Get(Protocol + "://" + p.Addr.String() + "/peers")
 	if err != nil || res.StatusCode != http.StatusOK {
-		log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Warn("Failed to retrieve peers")
+		log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Warnf("Failed to retrieve peers: %d", res.StatusCode)
 		p.UpdateStatus(false)
 		return nil, errors.New("Failed to retrieve peers")
 	}
@@ -130,7 +124,7 @@ func (p *Peer) IsUnreachable() bool {
 func (p *Peer) Ping() {
 	log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Debug("Ping")
 
-	res, err := http.Get(p.Addr() + "/status")
+	res, err := http.Get(Protocol + "://" + p.Addr.String() + "/status")
 	if err != nil || res.StatusCode != http.StatusOK {
 		log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Warn("Ping failed")
 		p.UpdateStatus(false)
@@ -167,7 +161,7 @@ func (p *Peer) Send(state State) {
 
 	//Try to send the state to the peer
 	for i := 0; i <= PeerMaxRetries; i++ {
-		res, err := http.Post(p.Addr(), "application/json", bytes.NewBuffer(jsonVal))
+		res, err := http.Post(Protocol+"://"+p.Addr.String(), "application/json", bytes.NewBuffer(jsonVal))
 		if err == nil && res.StatusCode == http.StatusOK {
 			p.UpdateStatus(true)
 			return
@@ -188,18 +182,18 @@ func (p *Peer) Send(state State) {
 }
 
 //SendPeeringRequest sends a request for peering to a peer
-func (p *Peer) SendPeeringRequest(config Config) {
-	log.WithFields(log.Fields{"peer": p, "func": "SendPeeringRequest"}).Infof("Sending peering request with %v", config)
+func (p *Peer) SendPeeringRequest(addr Addr) {
+	log.WithFields(log.Fields{"peer": p, "func": "SendPeeringRequest"}).Infof("Sending peering request with %v", addr)
 
-	jsonVal, err := json.Marshal(config)
+	jsonVal, err := json.Marshal(addr)
 	if err != nil {
-		log.WithFields(log.Fields{"peer": p, "func": "SendPeeringRequest", "config": config}).Warn("Failed to marshal config")
+		log.WithFields(log.Fields{"peer": p, "func": "SendPeeringRequest", "addr": addr}).Warn("Failed to marshal addr")
 		return
 	}
 
 	//Try to send a peering request to the peer
 	for i := 0; i <= PeerMaxRetries; i++ {
-		res, err := http.Post(p.Addr()+"/peers", "application/json", bytes.NewBuffer(jsonVal))
+		res, err := http.Post(Protocol+"://"+p.Addr.String()+"/peers", "application/json", bytes.NewBuffer(jsonVal))
 		if err == nil && res.StatusCode == http.StatusOK {
 			p.UpdateStatus(true)
 			return
@@ -215,7 +209,7 @@ func (p *Peer) SendPeeringRequest(config Config) {
 
 //String returns a string representation of the peer
 func (p Peer) String() string {
-	return p.Config.String()
+	return p.Addr.String()
 }
 
 /*UpdateStatus updates the status of the peer following an action

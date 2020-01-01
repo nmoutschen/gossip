@@ -11,7 +11,7 @@ import (
 
 func TestNodePeersHandlerGet(t *testing.T) {
 	//Prepare peer and node
-	peer := NewPeer(Config{"127.0.0.1", 8081})
+	peer := NewPeer(Addr{"127.0.0.1", 8081})
 	n := NewNode("127.0.0.1", 8080)
 	n.Peers = append(n.Peers, peer)
 
@@ -31,16 +31,16 @@ func TestNodePeersHandlerGet(t *testing.T) {
 
 	if len(pr.Peers) != 1 {
 		t.Errorf("len(pr.Peers) == %d; want %d", len(pr.Peers), 1)
-	} else if pr.Peers[0] != peer.Config {
-		t.Errorf("pr.Peers[1] == %v; want %v", pr.Peers[0], peer.Config)
+	} else if pr.Peers[0] != peer.Addr {
+		t.Errorf("pr.Peers[1] == %v; want %v", pr.Peers[0], peer.Addr)
 	}
 }
 
 func TestNodePeersHandlerPost(t *testing.T) {
-	//Prepare config and node
-	config := Config{"127.0.0.1", 8081}
+	//Prepare address and node
+	addr := Addr{"127.0.0.1", 8081}
 	n := NewNode("127.0.0.1", 8080)
-	reqBody, _ := json.Marshal(config)
+	reqBody, _ := json.Marshal(addr)
 
 	//Send request
 	req := httptest.NewRequest("POST", "http://127.0.0.1:8080/peers", bytes.NewBuffer(reqBody))
@@ -52,10 +52,10 @@ func TestNodePeersHandlerPost(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
 	} else {
-		rConfig := <-n.addPeerChan
+		rAddr := <-n.addPeerChan
 
-		if rConfig != config {
-			t.Errorf("rConfig == %v; want %v", rConfig, config)
+		if rAddr != addr {
+			t.Errorf("rAddr == %v; want %v", rAddr, addr)
 		}
 	}
 }

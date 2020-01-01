@@ -11,26 +11,26 @@ import (
 
 //Controller represents a controller instance
 type Controller struct {
-	/*Config contains the configuration (IP address and port) for the
-	controller's HTTP server
+	/*Addr contains the address (IP address and port) for the controller's
+	HTTP server
 	*/
-	Config Config
-	//Peers is a sync.Map[Config]*Peer containing all known peers.
+	Addr Addr
+	//Peers is a sync.Map[Addr]*Peer containing all known peers.
 	Peers *sync.Map
 
-	addPeerChan chan Config
+	addPeerChan chan Addr
 }
 
 //NewController creates a new controller instance
 func NewController(ip string, port int) *Controller {
 	c := &Controller{
-		Config: Config{
+		Addr: Addr{
 			IP:   ip,
 			Port: port,
 		},
 		Peers: &sync.Map{},
 
-		addPeerChan: make(chan Config, 8),
+		addPeerChan: make(chan Addr, 8),
 	}
 
 	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Info("Initializing controller")
@@ -82,7 +82,7 @@ func (c *Controller) ConnectLowPeers() {
 		}
 
 		log.WithFields(log.Fields{"controller": c, "func": "ConnectLowPeers"}).Infof("Connecting peers %v and %v", lcPeers[i], lcPeers[i+1])
-		go lcPeers[i].SendPeeringRequest(lcPeers[i+1].Config)
+		go lcPeers[i].SendPeeringRequest(lcPeers[i+1].Addr)
 		/*Store peering temporarily, otherwise we would have to wait until the
 		next scan.
 		*/
@@ -112,7 +112,7 @@ func (c *Controller) ConnectLowPeers() {
 		for _, peer := range loPeers {
 			oPeer := peers[rand.Intn(len(peers))]
 			if peer.CanPeer(oPeer) {
-				go peer.SendPeeringRequest(oPeer.Config)
+				go peer.SendPeeringRequest(oPeer.Addr)
 				//Pre-emptively add peering in memory.
 				peer.Peers = append(peer.Peers, oPeer)
 				oPeer.Peers = append(oPeer.Peers, peer)
@@ -123,14 +123,14 @@ func (c *Controller) ConnectLowPeers() {
 	}
 }
 
-/*FindClusters look at all peers known to the controller and returns the Config
+/*FindClusters look at all peers known to the controller and returns the Addr
 of peers in separate slices if they are not connected.
 
 Each cluster thus represents a graph of peers that is not connected to the
 other clusters. In an ideal scenario, the slice returned should be of length 1.
 */
 func (c *Controller) FindClusters() [][]*Peer {
-	//Extract all configs from the list of known peers
+	//Extract all addresses from the list of known peers
 	var count int
 	peers := make(map[*Peer]bool)
 	c.Peers.Range(func(_, value interface{}) bool {
@@ -277,7 +277,7 @@ func (c *Controller) MergeClusters(clusters [][]*Peer) {
 				break
 			}
 			log.WithFields(log.Fields{"controller": c, "func": "MergeClusters"}).Infof("Connecting peers %v and %v", origs[i], clusters[dPos][d])
-			go origs[i].SendPeeringRequest(clusters[dPos][d].Config)
+			go origs[i].SendPeeringRequest(clusters[dPos][d].Addr)
 			/*Manually add the peers together, even though there is no proof
 			that the peering was successful at this team. It is necessary to do
 			this for the identification of nodes with less than PeerMinPeers
@@ -299,7 +299,7 @@ This function also takes care of removing peers that are irrecoverable.
 */
 func (c *Controller) ScanPeers() {
 	//Start peer removal temporary worker
-	removePeerChan := make(chan Config, 8)
+	removePeerChan := make(chan Addr, 8)
 	go c.removePeerWorker(removePeerChan)
 	//Closing the channel will automatically stop the worker
 	defer close(removePeerChan)
@@ -317,7 +317,7 @@ func (c *Controller) ScanPeers() {
 		//Remove irrecoverable peer
 		if peer.IsCtrlIrrecoverable() {
 			log.WithFields(log.Fields{"controller": c, "func": "ScanPeers", "peer": peer}).Info("Removing irrecoverable peer")
-			removePeerChan <- peer.Config
+			removePeerChan <- peer.Addr
 			return true
 		}
 
@@ -340,44 +340,44 @@ func (c *Controller) Run() {
 
 	//Run HTTP server
 	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Info("Starting controller")
-	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Fatal(http.ListenAndServe(c.Config.String(), nil))
+	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Fatal(http.ListenAndServe(c.Addr.String(), nil))
 }
 
 //String returns a string representation of the controller
 func (c *Controller) String() string {
-	return c.Config.String()
+	return c.Addr.String()
 }
 
 //addPeerWorker listens on the addPeerChan channel for new peers
 func (c *Controller) addPeerWorker() {
 	for {
-		config := <-c.addPeerChan
-		log.WithFields(log.Fields{"controller": c, "func": "addPeerWorker", "config": config}).Info("Received peering info")
+		addr := <-c.addPeerChan
+		log.WithFields(log.Fields{"controller": c, "func": "addPeerWorker", "addr": addr}).Info("Received peering info")
 
 		//Skip known peers
-		if _, known := c.Peers.Load(config); known {
-			log.WithFields(log.Fields{"controller": c, "func": "addPeerWorker", "config": config}).Debug("Skip known peer")
+		if _, known := c.Peers.Load(addr); known {
+			log.WithFields(log.Fields{"controller": c, "func": "addPeerWorker", "addr": addr}).Debug("Skip known peer")
 			continue
 		}
 
 		//Add peers to the list of known peers
-		peer := NewPeer(config)
-		c.Peers.Store(config, peer)
+		peer := NewPeer(addr)
+		c.Peers.Store(addr, peer)
 	}
 }
 
 //removePeerWorker is a temporary worker to remove irrecoverable peers
-func (c *Controller) removePeerWorker(removePeerChan chan Config) {
+func (c *Controller) removePeerWorker(removePeerChan chan Addr) {
 	for {
-		config, open := <-removePeerChan
+		addr, open := <-removePeerChan
 		if !open {
 			log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker"}).Debug("Stopping worker")
 			return
-		} else if _, ok := c.Peers.Load(config); ok {
-			log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker", "config": config}).Info("Removing peer")
-			c.Peers.Delete(config)
+		} else if _, ok := c.Peers.Load(addr); ok {
+			log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker", "addr": addr}).Info("Removing peer")
+			c.Peers.Delete(addr)
 		} else {
-			log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker", "config": config}).Debug("Ignore duplicate peer removal message")
+			log.WithFields(log.Fields{"controller": c, "func": "removePeerWorker", "addr": addr}).Debug("Ignore duplicate peer removal message")
 		}
 	}
 }
@@ -412,7 +412,7 @@ func (c *Controller) scanPeer(peer *Peer, scanned *sync.Map, wg *sync.WaitGroup)
 	defer wg.Done()
 
 	//This peer is already scanned
-	if _, ok := scanned.Load(peer.Config); ok {
+	if _, ok := scanned.Load(peer.Addr); ok {
 		log.WithFields(log.Fields{"controller": c, "func": "scanPeer", "peer": peer}).Debug("Skipping scanned peer")
 		return
 	}
@@ -420,7 +420,7 @@ func (c *Controller) scanPeer(peer *Peer, scanned *sync.Map, wg *sync.WaitGroup)
 	//Retrieve the list of peers of this peer
 	log.WithFields(log.Fields{"controller": c, "func": "scanPeer", "peer": peer}).Info("Scanning peer")
 	peers, err := peer.GetPeers()
-	scanned.Store(peer.Config, peer)
+	scanned.Store(peer.Addr, peer)
 	if err != nil {
 		log.WithFields(log.Fields{"controller": c, "func": "scanPeer", "peer": peer}).Info("Failed to scan peer")
 		return
@@ -430,9 +430,9 @@ func (c *Controller) scanPeer(peer *Peer, scanned *sync.Map, wg *sync.WaitGroup)
 	peer.Peers = nil
 
 	//Parse peers of the peer
-	for _, config := range peers {
+	for _, addr := range peers {
 		//Load the peer
-		iSubPeer, _ := c.Peers.LoadOrStore(config, NewPeer(config))
+		iSubPeer, _ := c.Peers.LoadOrStore(addr, NewPeer(addr))
 		subPeer, ok := iSubPeer.(*Peer)
 		if !ok {
 			log.WithFields(log.Fields{"controller": c, "func": "scanPeer", "peer": peer, "subPeer": subPeer}).Warn("Failed to assert subPeer")
@@ -443,7 +443,7 @@ func (c *Controller) scanPeer(peer *Peer, scanned *sync.Map, wg *sync.WaitGroup)
 		peer.Peers = append(peer.Peers, subPeer)
 
 		//Schedule the peer for scanning if it hasn't already been scanned
-		if _, ok := scanned.Load(config); !ok {
+		if _, ok := scanned.Load(addr); !ok {
 			log.WithFields(log.Fields{"controller": c, "func": "scanPeer", "peer": peer, "subPeer": subPeer}).Info("Adding subPeer for scanning")
 			wg.Add(1)
 			go c.scanPeer(subPeer, scanned, wg)

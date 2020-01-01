@@ -27,9 +27,9 @@ func (c *Controller) peersGetHandler(w http.ResponseWriter, r *http.Request) {
 	//Create response
 	cpr := &CtrlPeersResponse{}
 	c.Peers.Range(func(key, value interface{}) bool {
-		config, ok := key.(Config)
+		addr, ok := key.(Addr)
 		if !ok {
-			log.WithFields(log.Fields{"controller": c, "func": "peersGetHandler", "config": config}).Warn("Failed to assert config")
+			log.WithFields(log.Fields{"controller": c, "func": "peersGetHandler", "addr": addr}).Warn("Failed to assert address")
 			return true
 		}
 
@@ -40,10 +40,10 @@ func (c *Controller) peersGetHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		n := &CtrlPeerResponse{
-			Config: config,
+			Addr: addr,
 		}
 		for _, p := range peer.Peers {
-			n.Peers = append(n.Peers, p.Config)
+			n.Peers = append(n.Peers, p.Addr)
 		}
 
 		cpr.Nodes = append(cpr.Nodes, *n)
@@ -58,14 +58,14 @@ func (c *Controller) peersGetHandler(w http.ResponseWriter, r *http.Request) {
 //peersPostHandler handles 'POST /peers' requests
 func (c *Controller) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	log.WithFields(log.Fields{"controller": c, "func": "peersPostHandler"}).Info("Received POST /peers")
-	config := &Config{}
+	addr := &Addr{}
 
-	if err := json.NewDecoder(r.Body).Decode(config); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(addr); err != nil {
 		log.WithFields(log.Fields{"controller": c, "func": "peersPostHandler"}).Warn("Failed to decode request body")
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
 		return
 	}
 
-	c.addPeerChan <- *config
-	response(w, r, http.StatusOK, "Peer configuration received")
+	c.addPeerChan <- *addr
+	response(w, r, http.StatusOK, "Peer address received")
 }

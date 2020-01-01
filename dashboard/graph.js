@@ -4,8 +4,8 @@ var colors = {
     "text": "#FFFFFF"
 };
 
-function toString(config) {
-    return config["ip"] + ":" + config["port"].toString();
+function toString(addr) {
+    return addr["ip"] + ":" + addr["port"].toString();
 }
 
 function fetchData(url, callback) {
@@ -29,25 +29,25 @@ function parseData(data) {
 
     if (data["nodes"] !== null) {
         data["nodes"].forEach(function(node, i, _) {
-            config = toString(node["config"]);
+            addr = toString(node["addr"]);
 
             nodes.push({data: {
-                id: config
+                id: addr
             }});
 
             if (node["peers"] !== null) {
                 node["peers"].forEach(function(peer, j, _) {
                     if (!analyzed.includes(toString(peer))) {
                         nodes.push({data:{
-                            id: config+"-"+toString(peer),
-                            source: config,
+                            id: addr+"-"+toString(peer),
+                            source: addr,
                             target: toString(peer)
                         }});
                     }
                 });
             }
 
-            analyzed.push(toString(node["config"]));
+            analyzed.push(toString(node["addr"]));
         });
     }
 

@@ -10,9 +10,9 @@ import (
 
 func TestControllerPeersHandlerGet(t *testing.T) {
 	//Prepare peer and controller
-	peer := NewPeer(Config{"127.0.0.1", 8080})
+	peer := NewPeer(Addr{"127.0.0.1", 8080})
 	c := NewController("127.0.0.1", 7080)
-	c.Peers.Store(peer.Config, peer)
+	c.Peers.Store(peer.Addr, peer)
 	peer.Peers = []*Peer{peer}
 
 	//Send request
@@ -34,8 +34,8 @@ func TestControllerPeersHandlerGet(t *testing.T) {
 		return
 	}
 
-	if cpr.Nodes[0].Config != peer.Config {
-		t.Errorf("cpr.Nodes[0].Config == %v; want %v", cpr.Nodes[0].Config, peer.Config)
+	if cpr.Nodes[0].Addr != peer.Addr {
+		t.Errorf("cpr.Nodes[0].Addr == %v; want %v", cpr.Nodes[0].Addr, peer.Addr)
 	}
 
 	if len(cpr.Nodes[0].Peers) != 1 {
@@ -43,16 +43,16 @@ func TestControllerPeersHandlerGet(t *testing.T) {
 		return
 	}
 
-	if cpr.Nodes[0].Peers[0] != peer.Config {
-		t.Errorf("cpr.Nodes[0].Peers[0] == %v; want %v", cpr.Nodes[0].Peers[0], peer.Config)
+	if cpr.Nodes[0].Peers[0] != peer.Addr {
+		t.Errorf("cpr.Nodes[0].Peers[0] == %v; want %v", cpr.Nodes[0].Peers[0], peer.Addr)
 	}
 }
 
 func TestControllerPeersHandlerPost(t *testing.T) {
-	//Prepare config and controller
-	config := Config{"127.0.0.1", 8080}
+	//Prepare addr and controller
+	addr := Addr{"127.0.0.1", 8080}
 	c := NewController("127.0.0.1", 7080)
-	reqBody, _ := json.Marshal(config)
+	reqBody, _ := json.Marshal(addr)
 
 	//Send request
 	req := httptest.NewRequest("POST", "http://127.0.0.1:7080/peers", bytes.NewBuffer(reqBody))
@@ -65,9 +65,9 @@ func TestControllerPeersHandlerPost(t *testing.T) {
 		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
 	}
 
-	rConfig := <-c.addPeerChan
+	rAddr := <-c.addPeerChan
 
-	if rConfig != config {
-		t.Errorf("rConfig == %v; want %v", rConfig, config)
+	if rAddr != addr {
+		t.Errorf("rAddr == %v; want %v", rAddr, addr)
 	}
 }
