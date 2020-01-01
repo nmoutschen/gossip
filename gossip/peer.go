@@ -53,7 +53,7 @@ func (p *Peer) CanPeer(tgt *Peer) bool {
 
 	for _, subPeer := range p.Peers {
 		if subPeer.Config == tgt.Config {
-			log.WithFields(log.Fields{"peer": p, "func": "CanPeer"}).Info("Cannot peer with already peered node")
+			log.WithFields(log.Fields{"peer": p, "func": "CanPeer"}).Infof("Cannot peer with already peered node %v", tgt.Config)
 			return false
 		}
 	}
@@ -189,7 +189,7 @@ func (p *Peer) Send(state State) {
 
 //SendPeeringRequest sends a request for peering to a peer
 func (p *Peer) SendPeeringRequest(config Config) {
-	log.WithFields(log.Fields{"peer": p, "func": "SendPeeringRequest"}).Info("Sending peering request")
+	log.WithFields(log.Fields{"peer": p, "func": "SendPeeringRequest"}).Infof("Sending peering request with %v", config)
 
 	jsonVal, err := json.Marshal(config)
 	if err != nil {
