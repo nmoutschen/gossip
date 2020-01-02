@@ -69,7 +69,7 @@ func (p *Peer) CanPeer(tgt *Peer) bool {
 func (p *Peer) Get() (State, error) {
 	res, err := http.Get(p.URL())
 	if err != nil {
-		log.WithFields(log.Fields{"peer": p, "func": "Get"}).Warn("Failed to retrieve the latest state with error: %s", err.Error())
+		log.WithFields(log.Fields{"peer": p, "func": "Get"}).Warnf("Failed to retrieve the latest state with error: %s", err.Error())
 		p.UpdateStatus(false)
 		return State{}, err
 	}
