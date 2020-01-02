@@ -232,6 +232,40 @@ func (p *Peer) SendPeeringRequest(addr Addr) {
 	p.UpdateStatus(false)
 }
 
+/*SendPeerDeletionRequest sends a request to delete the addr from the list of
+known peers.*/
+func (p *Peer) SendPeerDeletionRequest(addr Addr) {
+	log.WithFields(log.Fields{"peer": p, "func": "SendPeerDeletionRequest"}).Infof("Sending peer deletion request to %v", addr)
+
+	jsonVal, err := json.Marshal(addr)
+	if err != nil {
+		log.WithFields(log.Fields{"peer": p, "func": "SendPeerDeletionRequest", "addr": addr}).Warnf("Failed to marshal addr: %s", err.Error())
+		return
+	}
+
+	//Try to send a peering request to the peer
+	for i := 0; i <= p.config.Peer.MaxRetries; i++ {
+		req, err := http.NewRequest("DELETE", p.URL()+"/peers", bytes.NewBuffer(jsonVal))
+		req.Header.Add("Content-Type", "application/json")
+		if err != nil {
+			log.WithFields(log.Fields{"peer": p, "func": "SendPeerDeletionRequest", "addr": addr}).Warnf("Failed to create request: %s", err.Error())
+			return
+		}
+
+		res, err := http.DefaultClient.Do(req)
+		if err == nil && res.StatusCode == http.StatusOK {
+			p.UpdateStatus(true)
+			return
+		}
+
+		//TODO: add jitter
+		time.Sleep(p.config.Peer.BackoffDuration * (1 >> i))
+	}
+
+	log.WithFields(log.Fields{"peer": p, "func": "SendPeerDeletionRequest"}).Warn("Failed to send peer deletion request")
+	p.UpdateStatus(false)
+}
+
 //String returns a string representation of the peer
 func (p Peer) String() string {
 	return p.Addr.String()

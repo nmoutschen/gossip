@@ -3,8 +3,7 @@
 trap ctrl_c INT
 
 function ctrl_c() {
-    kill $NODE_PIDS
-    kill $CONTROL_PID
+    kill -INT $NODE_PIDS $CONTROL_PID
     exit
 }
 
@@ -35,7 +34,7 @@ while ! nc -vz localhost 7080; do
     sleep 1
 done
 for i in {8080..8089}; do
-    curl -X POST -d '{"ip": "127.0.0.1", "port": '$i'}' http://127.0.0.1:7080/peers
+    curl -s -X POST -d '{"ip": "127.0.0.1", "port": '$i'}' http://127.0.0.1:7080/peers
 done
 
 # Wait for the controllers to connect all the nodes
@@ -43,14 +42,12 @@ sleep 7s
 
 # Parse the graph
 for l in $(curl -s http://127.0.0.1:7080/peers | jq '.nodes[].peers | length'); do
-    if [ l \< $GOSSIP_CONTROLLER_MINPEERS ]; then
+    if (( l < $GOSSIP_CONTROLLER_MINPEERS )); then
         echo "Found node with less than $GOSSIP_CONTROLLER_MINPEERS peers"
-        kill $NODE_PIDS
-        kill $CONTROL_PID
+        kill -INT $NODE_PIDS $CONTROL_PID
         exit 1
     fi
 done
 
 echo "All node have $GOSSIP_CONTROLLER_MINPEERS peers or more"
-kill $NODE_PIDS
-kill $CONTROL_PID
+kill -INT $NODE_PIDS $CONTROL_PID

@@ -32,5 +32,6 @@ jobs:
           sudo apt-get install jq -y
       - name: Run integration tests
         run: |
-          tests/merge.sh
+          tests/nodes.sh
+          tests/controller.sh
   

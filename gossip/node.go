@@ -1,9 +1,12 @@
 package gossip
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
 	"sort"
 	"time"
 
@@ -212,8 +215,41 @@ func (n *Node) Run() {
 	http.HandleFunc("/peers", n.peersHandler)
 
 	//Run HTTP server
+	server := &http.Server{
+		Addr: n.String(),
+	}
+
+	done := make(chan bool)
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+
+	go func() {
+		<-quit
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			log.WithFields(log.Fields{"node": n, "func": "Run"}).Fatalf("Error shutting down node: %s", err.Error())
+		}
+		n.Shutdown()
+		close(done)
+	}()
+
 	log.WithFields(log.Fields{"node": n, "func": "Run"}).Info("Starting node")
-	log.WithFields(log.Fields{"node": n, "func": "Run"}).Fatal(http.ListenAndServe(n.String(), nil))
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.WithFields(log.Fields{"node": n, "func": "Run"}).Errorf("Fatal error with HTTP server: %s", err.Error())
+	}
+	<-done
+}
+
+//Shutdown shuts down the node
+func (n *Node) Shutdown() {
+	log.WithFields(log.Fields{"node": n, "func": "Shutdown"}).Info("Shutting down node")
+	for _, peer := range n.Peers {
+		log.WithFields(log.Fields{"node": n, "func": "Shutdown"}).Infof("Removing peer %v", peer)
+		peer.SendPeerDeletionRequest(n.Addr())
+	}
 }
 
 //String returns a string representation of the node
@@ -251,30 +287,6 @@ func (n *Node) UpdateState(state State) (State, bool) {
 	return state, false
 }
 
-/*fetchStateWorker waits for peers on the n.fetchStateChan channel and
-retrieves the last state from those peers, then sends the state to the
-n.stateChan channel.
-*/
-func (n *Node) fetchStateWorker() {
-	for {
-		peer := <-n.fetchStateChan
-		log.WithFields(log.Fields{"node": n, "peer": peer, "func": "fetchStateWorker"}).Info("Fetching latest state")
-
-		/*It's possible that we have already fetched the latest state from the
-		peer. If that's the case, ignore, as this would generate a useless
-		GET request to the peer.
-		*/
-		if peer.LastState <= n.State.Timestamp {
-			log.WithFields(log.Fields{"node": n, "peer": peer, "func": "fetchStateWorker"}).Info("Skip fetching state")
-			continue
-		}
-
-		if state, err := peer.Get(); err == nil {
-			n.stateChan <- state
-		}
-	}
-}
-
 /*addPeerWorker waits for new Addrs on the n.addPeerChan channel and processes
 them.
 
@@ -304,6 +316,30 @@ func (n *Node) deletePeerWorker() {
 	for {
 		addr := <-n.deletePeerChan
 		n.DeletePeer(addr)
+	}
+}
+
+/*fetchStateWorker waits for peers on the n.fetchStateChan channel and
+retrieves the last state from those peers, then sends the state to the
+n.stateChan channel.
+*/
+func (n *Node) fetchStateWorker() {
+	for {
+		peer := <-n.fetchStateChan
+		log.WithFields(log.Fields{"node": n, "peer": peer, "func": "fetchStateWorker"}).Info("Fetching latest state")
+
+		/*It's possible that we have already fetched the latest state from the
+		peer. If that's the case, ignore, as this would generate a useless
+		GET request to the peer.
+		*/
+		if peer.LastState <= n.State.Timestamp {
+			log.WithFields(log.Fields{"node": n, "peer": peer, "func": "fetchStateWorker"}).Info("Skip fetching state")
+			continue
+		}
+
+		if state, err := peer.Get(); err == nil {
+			n.stateChan <- state
+		}
 	}
 }
 
