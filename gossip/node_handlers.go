@@ -10,15 +10,33 @@ import (
 //peersHandler handles requests to the '/peers' path
 func (n *Node) peersHandler(w http.ResponseWriter, r *http.Request) {
 	corsHeadersResponse(&w, r, n.config, "GET, POST")
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodDelete:
+		n.peersDeleteHandler(w, r)
+	case http.MethodGet:
 		n.peersGetHandler(w, r)
-	} else if r.Method == http.MethodPost {
+	case http.MethodPost:
 		n.peersPostHandler(w, r)
-	} else if r.Method == http.MethodOptions {
+	case http.MethodOptions:
 		corsOptionsResponse(w, r, n.config, "GET, POST")
-	} else {
+	default:
 		methodNotAllowedHandler(w, r)
 	}
+}
+
+//peersDeleteHandler handles 'DELETE /peers' requests
+func (n *Node) peersDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	log.WithFields(log.Fields{"node": n, "func": "peersDeleteHandler"}).Info("Received GET /peers")
+	addr := &Addr{}
+
+	if err := json.NewDecoder(r.Body).Decode(addr); err != nil {
+		log.WithFields(log.Fields{"node": n, "func": "peersPostHandler"}).Warnf("Failed to decode request body: %s", err.Error())
+		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
+		return
+	}
+
+	n.deletePeerChan <- *addr
+	response(w, r, http.StatusOK, "Peer deletion request received")
 }
 
 //peersGetHandler handles 'GET /peers' requests
@@ -39,7 +57,7 @@ func (n *Node) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	addr := &Addr{}
 
 	if err := json.NewDecoder(r.Body).Decode(addr); err != nil {
-		log.WithFields(log.Fields{"node": n, "func": "peersPostHandler"}).Warn("Failed to decode request body")
+		log.WithFields(log.Fields{"node": n, "func": "peersPostHandler"}).Warnf("Failed to decode request body: %s", err.Error())
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
 		return
 	}
@@ -51,13 +69,14 @@ func (n *Node) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 //rootHandler handles requests to the '/' path
 func (n *Node) rootHandler(w http.ResponseWriter, r *http.Request) {
 	corsHeadersResponse(&w, r, n.config, "GET, POST")
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		n.rootGetHandler(w, r)
-	} else if r.Method == http.MethodPost {
+	case http.MethodPost:
 		n.rootPostHandler(w, r)
-	} else if r.Method == http.MethodOptions {
+	case http.MethodOptions:
 		corsOptionsResponse(w, r, n.config, "GET, POST")
-	} else {
+	default:
 		methodNotAllowedHandler(w, r)
 	}
 }

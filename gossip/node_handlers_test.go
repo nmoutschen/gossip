@@ -60,6 +60,31 @@ func TestNodePeersHandlerPost(t *testing.T) {
 	}
 }
 
+func TestNodePeersHandlerDelete(t *testing.T) {
+	//Prepare address and node
+	addr := Addr{"127.0.0.1", 8081}
+	n := NewNode(nil)
+	reqBody, _ := json.Marshal(addr)
+
+	//Send request
+	req := httptest.NewRequest("DELETE", n.URL()+"/peers", bytes.NewBuffer(reqBody))
+	w := httptest.NewRecorder()
+	n.peersHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
+	} else {
+		rAddr := <-n.deletePeerChan
+
+		if rAddr != addr {
+			t.Errorf("rAddr == %v; want %v", rAddr, addr)
+		}
+	}
+
+}
+
 func TestNodePeersHandlerOptions(t *testing.T) {
 	//Prepare peer and node
 	n := NewNode(nil)
