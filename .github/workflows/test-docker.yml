@@ -1,0 +1,29 @@
+name: test-docker
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "control/**"
+      - "gossip/**"
+      - "node/**"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "control/**"
+      - "gossip/**"
+      - "node/**"
+jobs:
+  test-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Install packages
+        run: |
+          sudo apt-get install jq -y
+      - name: Run docker tests
+        run: |
+          tests/docker.sh
+  

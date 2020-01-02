@@ -1,0 +1,9 @@
+FROM golang:1.13
+
+WORKDIR /go/src/app
+COPY node node
+COPY gossip gossip
+
+RUN cd node/ && go mod download && go build .
+CMD ["node/node"]
+EXPOSE 8080

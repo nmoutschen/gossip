@@ -15,7 +15,7 @@ type ControllerConfig struct {
 	instance*/
 	ScanInterval time.Duration `json:"scanInterval" yaml:"scanInterval" default:"60s"`
 	//IP address of the controller
-	IP string `json:"ip" yaml:"ip" default:"127.0.0.1"`
+	IP string `json:"ip" yaml:"ip" default:""`
 	//Port for the HTTP server on the controller
 	Port int `json:"port" yaml:"port" default:"7080"`
 }
@@ -41,7 +41,7 @@ type NodeConfig struct {
 	//ScanInterval is the delay between two pings from a node instance
 	PingInterval time.Duration `json:"pingInterval" yaml:"pingInterval" default:"30s"`
 	//IP address of the node
-	IP string `json:"ip" yaml:"ip" default:"127.0.0.1"`
+	IP string `json:"ip" yaml:"ip" default:""`
 	//Port for the HTTP server on the node
 	Port int `json:"port" yaml:"port" default:"8080"`
 }

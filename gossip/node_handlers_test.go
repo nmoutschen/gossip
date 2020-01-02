@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -78,8 +79,8 @@ func TestNodePeersHandlerPostNoIP(t *testing.T) {
 	} else {
 		rAddr := <-n.addPeerChan
 
-		if rAddr.IP != req.RemoteAddr {
-			t.Errorf("rAddr.IP == %s; want %s", rAddr.IP, req.RemoteAddr)
+		if rAddr.IP != strings.SplitN(req.RemoteAddr, ":", 2)[0] {
+			t.Errorf("rAddr.IP == %s; want %s", rAddr.IP, strings.SplitN(req.RemoteAddr, ":", 2)[0])
 		}
 
 		if rAddr.Port != addr.Port {
@@ -130,8 +131,8 @@ func TestNodePeersHandlerDeleteNoIP(t *testing.T) {
 	} else {
 		rAddr := <-n.deletePeerChan
 
-		if rAddr.IP != req.RemoteAddr {
-			t.Errorf("rAddr.IP == %s; want %s", rAddr.IP, req.RemoteAddr)
+		if rAddr.IP != strings.SplitN(req.RemoteAddr, ":", 2)[0] {
+			t.Errorf("rAddr.IP == %s; want %s", rAddr.IP, strings.SplitN(req.RemoteAddr, ":", 2)[0])
 		}
 
 		if rAddr.Port != addr.Port {
@@ -157,7 +158,7 @@ func TestNodePeersHandlerOptions(t *testing.T) {
 
 func TestNodeRootHandlerGet(t *testing.T) {
 	//Prepare state and node
-	state := State{time.Now().UnixNano(), "Test data"}
+	state := State{time.Now().UnixNano(), "TestNodeRootHandlerGet"}
 	n := NewNode(nil)
 	n.State = state
 
@@ -182,7 +183,7 @@ func TestNodeRootHandlerGet(t *testing.T) {
 
 func TestNodeRootHandlerPost(t *testing.T) {
 	//Prepare state and node
-	state := State{time.Now().UnixNano(), "Test data"}
+	state := State{time.Now().UnixNano(), "TestNodeRootHandlerPost"}
 	n := NewNode(nil)
 	reqBody, _ := json.Marshal(state)
 
@@ -221,7 +222,7 @@ func TestNodeRootHandlerOptions(t *testing.T) {
 
 func TestNodeStatusHandlerGet(t *testing.T) {
 	//Prepare state and node
-	state := State{time.Now().UnixNano(), "Test data"}
+	state := State{time.Now().UnixNano(), "TestNodeStatusHandlerGet"}
 	n := NewNode(nil)
 	n.State = state
 

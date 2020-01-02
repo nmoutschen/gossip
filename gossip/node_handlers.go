@@ -31,7 +31,7 @@ func (n *Node) peersDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	addr := &Addr{}
 
 	if err := json.NewDecoder(r.Body).Decode(addr); err != nil {
-		log.WithFields(log.Fields{"node": n, "func": "peersPostHandler"}).Warnf("Failed to decode request body: %s", err.Error())
+		log.WithFields(log.Fields{"node": n, "func": "peersDeleteHandler"}).Warnf("Failed to decode request body: %s", err.Error())
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
 		return
 	}
@@ -39,8 +39,9 @@ func (n *Node) peersDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	/*Infer that the client node does not know its IP address and use the one
 	from the HTTP request instead.
 	*/
-	if addr.IP == "" {
-		addr.IP = strings.SplitN(r.RemoteAddr, ":", 1)[0]
+	if (*addr).IP == "" {
+		log.WithFields(log.Fields{"node": n, "func": "peersDeleteHandler"}).Infof("Auto-detecting IP address for peer: %s", strings.SplitN(r.RemoteAddr, ":", 2)[0])
+		(*addr).IP = strings.SplitN(r.RemoteAddr, ":", 2)[0]
 	}
 
 	n.deletePeerChan <- *addr
@@ -73,8 +74,9 @@ func (n *Node) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	/*Infer that the client node does not know its IP address and use the one
 	from the HTTP request instead.
 	*/
-	if addr.IP == "" {
-		addr.IP = strings.SplitN(r.RemoteAddr, ":", 1)[0]
+	if (*addr).IP == "" {
+		log.WithFields(log.Fields{"node": n, "func": "peersPostHandler"}).Infof("Auto-detecting IP address for peer: %s", strings.SplitN(r.RemoteAddr, ":", 2)[0])
+		(*addr).IP = strings.SplitN(r.RemoteAddr, ":", 2)[0]
 	}
 
 	n.addPeerChan <- *addr
