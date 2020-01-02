@@ -1,36 +1,36 @@
 name: test-integ
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - "control/**"
-      - "gossip/**"
-      - "node/**"
-  pull_request:
-    branches:
-      - master
-    paths:
-      - "control/**"
-      - "gossip/**"
-      - "node/**"
-  jobs:
+    push:
+        branches:
+        - master
+        paths:
+        - "control/**"
+        - "gossip/**"
+        - "node/**"
+    pull_request:
+        branches:
+        - master
+        paths:
+        - "control/**"
+        - "gossip/**"
+        - "node/**"
+jobs:
     test-integ:
-      strategy:
-        matrix:
-          version: [1.13.x]
-      runs-on: ubuntu-latest
-      steps:
-      - name: Install Go
+        strategy:
+            matrix:
+                version: [1.13.x]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
         uses: actions/setup-go@v1
         with:
-          go-version: ${{ matrix.version }}
-      - name: Checkout code
+        go-version: ${{ matrix.version }}
+    - name: Checkout code
         uses: actions/checkout@v1
-      - name: Install packages
+    - name: Install packages
         run: |
-          sudo apt-get install jq -y
-      - name: Run integration tests
+        sudo apt-get install jq -y
+    - name: Run integration tests
         run: |
-          tests/merge.sh
+        tests/merge.sh
   
