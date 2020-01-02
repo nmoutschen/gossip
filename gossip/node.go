@@ -96,10 +96,10 @@ func (n *Node) PeerSendState(state State) int {
 	var peers []*Peer
 	//If there are too many peers, need to limit to PeerMaxRecipients peers
 	//chosen randomly.
-	if len(n.Peers) > PeerMaxRecipients {
+	if len(n.Peers) > n.config.Node.MaxRecipients {
 		for _, i := range rand.Perm(len(n.Peers)) {
 			peers = append(peers, n.Peers[i])
-			if len(peers) >= PeerMaxRecipients {
+			if len(peers) >= n.config.Node.MaxRecipients {
 				break
 			}
 		}
@@ -268,7 +268,7 @@ func (n *Node) peerSendStateWorker() {
 //pingWorker checks the status of all peers at regular interval.
 func (n *Node) pingWorker() {
 	for {
-		time.Sleep(PingDelay)
+		time.Sleep(n.config.Node.PingInterval * time.Millisecond)
 		n.PingPeers()
 	}
 }

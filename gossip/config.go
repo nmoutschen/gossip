@@ -6,14 +6,14 @@ import (
 
 //ControllerConfig represents the configuration properties for controllers
 type ControllerConfig struct {
+	//MinPeers is the minimum number of peers that any peer should have
+	MinPeers int `json:"minPeers"`
 	/*MaxPingDelay is the time (in ms) before the controller will consider a
 	peer as irrecoverable*/
 	MaxPingDelay int64 `json:"maxPingDelay"`
-	//MinPeers is the minimum number of peers that any peer should have
-	MinPeers int `json:"minPeers"`
 	/*ScanInterval is the delay (in ms) between two scans from a controller
 	instance*/
-	ScanInterval int `json:"scanInterval"`
+	ScanInterval time.Duration `json:"scanInterval"`
 }
 
 //CorsConfig represents the configuration properties for CORS
@@ -35,14 +35,14 @@ type NodeConfig struct {
 	peer as irrecoverable*/
 	MaxPingDelay int64 `json:"maxPingDelay"`
 	//ScanInterval is the delay (in ms) between two pings from a node instance
-	PingInterval int `json:"pingInterval"`
+	PingInterval time.Duration `json:"pingInterval"`
 }
 
 //PeerConfig represents the configuration properties for peers
 type PeerConfig struct {
 	/*BackoffDuration is the base duration (in ms) before retrying to send a
 	message to a peer*/
-	BackoffDuration int `json:"backoffDuration"`
+	BackoffDuration time.Duration `json:"backoffDuration"`
 	/*MaxAttempts is the number of attempts before considering the peer as
 	unreachable*/
 	MaxAttempts int `json:"maxAttempts"`
@@ -85,19 +85,3 @@ var DefaultConfig *Config = &Config{
 	},
 	Protocol: "http",
 }
-
-//TODO: Switch to dynamic config
-const (
-	ControllerMaxPingDelay int64         = 60 * 60 //1 hour
-	ControllerScanDelay    time.Duration = 60 * time.Second
-	CorsAllowHeaders       string        = "Accept, Content-Type, Content-Length, Accept-Encoding"
-	CorsAllowOrigin        string        = "*"
-
-	PeerBackoffDuration time.Duration = 200 * time.Millisecond
-	PeerMaxAttempts     int           = 5
-	PeerMaxRecipients   int           = 4
-	PeerMaxRetries      int           = 3
-	PeerMaxPingDelay    int64         = 5 * 60 //5 minutes
-	PeerMinPeers        int           = 3
-	PingDelay           time.Duration = 30 * time.Second
-)

@@ -27,7 +27,7 @@ func TestNewPeer(t *testing.T) {
 	if p.Addr != addr {
 		t.Errorf("p.Addr == %v; want %v", p.Addr, addr)
 	}
-	maxLastSuccess := time.Now().Unix() - PeerMaxPingDelay
+	maxLastSuccess := time.Now().Unix() - p.config.Node.MaxPingDelay
 	if p.LastSuccess < maxLastSuccess {
 		t.Errorf("p.LastSuccess == %d; want >= %d", p.LastSuccess, maxLastSuccess)
 	}
@@ -282,9 +282,9 @@ func TestPeerIsIrrecoverable(t *testing.T) {
 		LastSuccess int64
 	}{
 		{false, time.Now().Unix()},
-		{false, time.Now().Unix() - PeerMaxPingDelay + 5},
+		{false, time.Now().Unix() - p.config.Node.MaxPingDelay + 5},
 		{true, 0},
-		{true, time.Now().Unix() - PeerMaxPingDelay - 5},
+		{true, time.Now().Unix() - p.config.Node.MaxPingDelay - 5},
 	}
 
 	for _, testCase := range testCases {
@@ -302,9 +302,9 @@ func TestPeerIsCtrlIrrecoverable(t *testing.T) {
 		LastSuccess int64
 	}{
 		{false, time.Now().Unix()},
-		{false, time.Now().Unix() - ControllerMaxPingDelay + 5},
+		{false, time.Now().Unix() - DefaultConfig.Controller.MaxPingDelay + 5},
 		{true, 0},
-		{true, time.Now().Unix() - ControllerMaxPingDelay - 5},
+		{true, time.Now().Unix() - DefaultConfig.Controller.MaxPingDelay - 5},
 	}
 
 	for _, testCase := range testCases {
@@ -322,8 +322,8 @@ func TestPeerIsUnreachable(t *testing.T) {
 		Attempts int
 	}{
 		{false, 0},
-		{false, PeerMaxAttempts - 1},
-		{true, PeerMaxAttempts},
+		{false, DefaultConfig.Peer.MaxAttempts - 1},
+		{true, DefaultConfig.Peer.MaxAttempts},
 	}
 
 	for _, testCase := range testCases {
@@ -510,7 +510,7 @@ func TestPeerSendUnreachable(t *testing.T) {
 	}))
 	defer func() { testServer.Close() }()
 	p.Addr = parseURL(testServer.URL)
-	p.Attempts = PeerMaxAttempts
+	p.Attempts = DefaultConfig.Peer.MaxAttempts
 	state := State{
 		Timestamp: time.Now().UnixNano(),
 		Data:      "Test Data",
@@ -521,8 +521,8 @@ func TestPeerSendUnreachable(t *testing.T) {
 	if p.LastSuccess != 0 {
 		t.Errorf("p.LastSuccess == %d after unreachable p.Send(); want %d", p.LastSuccess, 0)
 	}
-	if p.Attempts != PeerMaxAttempts {
-		t.Errorf("p.Attempts == %d after unreachable p.Send(); want %d", p.Attempts, PeerMaxAttempts)
+	if p.Attempts != DefaultConfig.Peer.MaxAttempts {
+		t.Errorf("p.Attempts == %d after unreachable p.Send(); want %d", p.Attempts, DefaultConfig.Peer.MaxAttempts)
 	}
 }
 

@@ -11,18 +11,18 @@ func TestCorsOptionsResponse(t *testing.T) {
 	methods := "GET, POST"
 	req := httptest.NewRequest("GET", "http://127.0.0.1:8080", nil)
 	w := httptest.NewRecorder()
-	corsOptionsResponse(w, req, methods)
+	corsOptionsResponse(w, req, DefaultConfig, methods)
 	res := w.Result()
 
 	if res.StatusCode != http.StatusOK {
 		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
 	}
 
-	if res.Header.Get("Access-Control-Allow-Origin") != CorsAllowOrigin {
-		t.Errorf("\"Access-Control-Allow-Origin\" == %s; want %s", res.Header.Get("Access-Control-Allow-Origin"), CorsAllowOrigin)
+	if res.Header.Get("Access-Control-Allow-Origin") != DefaultConfig.Cors.AllowOrigin {
+		t.Errorf("\"Access-Control-Allow-Origin\" == %s; want %s", res.Header.Get("Access-Control-Allow-Origin"), DefaultConfig.Cors.AllowOrigin)
 	}
-	if res.Header.Get("Access-Control-Allow-Headers") != CorsAllowHeaders {
-		t.Errorf("\"Access-Control-Allow-Headers\" == %s; want %s", res.Header.Get("Access-Control-Allow-Headers"), CorsAllowHeaders)
+	if res.Header.Get("Access-Control-Allow-Headers") != DefaultConfig.Cors.AllowHeaders {
+		t.Errorf("\"Access-Control-Allow-Headers\" == %s; want %s", res.Header.Get("Access-Control-Allow-Headers"), DefaultConfig.Cors.AllowHeaders)
 	}
 	if res.Header.Get("Access-Control-Allow-Methods") != methods {
 		t.Errorf("\"Access-Control-Allow-Methods\" == %s; want %s", res.Header.Get("Access-Control-Allow-Methods"), methods)

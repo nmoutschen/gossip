@@ -44,8 +44,8 @@ func NewController(addr Addr, config *Config) *Controller {
 	return c
 }
 
-/*ConnectLowPeers will find peers for nodes that have less than PeerMinPeers
-peers.
+/*ConnectLowPeers will find peers for nodes that have less than
+c.config.Controller.MinPeers peers.
 
 To do so, we duplicate peers based on the number of missing connections,
 shuffle the slice, then pair them two by two.
@@ -60,7 +60,7 @@ func (c *Controller) ConnectLowPeers() {
 	*/
 	var lcPeers []*Peer
 	for _, peer := range c.FindLowPeers() {
-		for i := len(peer.Peers); i < PeerMinPeers; i++ {
+		for i := len(peer.Peers); i < c.config.Controller.MinPeers; i++ {
 			lcPeers = append(lcPeers, peer)
 		}
 	}
@@ -212,7 +212,7 @@ func (c *Controller) FindClusters() [][]*Peer {
 }
 
 /*FindLowPeers parse through the list of peers and return those who
-have less than PeerMinPeers peers.
+have less than c.config.Controller.MinPeers peers.
 */
 func (c *Controller) FindLowPeers() (lcPeers []*Peer) {
 	c.Peers.Range(func(_, value interface{}) bool {
@@ -222,7 +222,7 @@ func (c *Controller) FindLowPeers() (lcPeers []*Peer) {
 			return true
 		}
 
-		if len(peer.Peers) < PeerMinPeers {
+		if len(peer.Peers) < c.config.Controller.MinPeers {
 			lcPeers = append(lcPeers, peer)
 		}
 		return true
@@ -244,7 +244,7 @@ func (c *Controller) MergeClusters(clusters [][]*Peer) {
 	/*The number of connections cannot be greater than the number of peers in a
 	cluster.
 	*/
-	minPeers := PeerMinPeers
+	minPeers := c.config.Controller.MinPeers
 	for _, cluster := range clusters {
 		if len(cluster) < minPeers {
 			minPeers = len(cluster)
@@ -286,8 +286,8 @@ func (c *Controller) MergeClusters(clusters [][]*Peer) {
 			go origs[i].SendPeeringRequest(clusters[dPos][d].Addr)
 			/*Manually add the peers together, even though there is no proof
 			that the peering was successful at this team. It is necessary to do
-			this for the identification of nodes with less than PeerMinPeers
-			peers.
+			this for the identification of nodes with less than
+			c.config.Controller.MinPeers peers.
 			*/
 			origs[i].Peers = append(origs[i].Peers, clusters[dPos][d])
 			clusters[dPos][d].Peers = append(clusters[dPos][d].Peers, origs[i])
@@ -391,7 +391,7 @@ func (c *Controller) removePeerWorker(removePeerChan chan Addr) {
 //scanWorker periodically scans peers
 func (c *Controller) scanWorker() {
 	for {
-		time.Sleep(ControllerScanDelay)
+		time.Sleep(c.config.Controller.ScanInterval * time.Millisecond)
 		log.WithFields(log.Fields{"controller": c, "func": "scanWorker"}).Info("Start scan")
 
 		//Scan all nodes
@@ -408,7 +408,7 @@ func (c *Controller) scanWorker() {
 		//Merge clusters
 		c.MergeClusters(clusters)
 
-		//Connect nodes with less than PeerMinPeers peers.
+		//Connect nodes with less than c.config.Controller.MinPeers peers.
 		c.ConnectLowPeers()
 	}
 }

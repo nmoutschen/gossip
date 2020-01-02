@@ -185,8 +185,8 @@ func TestControllerFindLowPeersLine(t *testing.T) {
 	fail. Therefore, log instead of mark as error.
 	*/
 	for _, peer := range peers {
-		if len(peer.Peers) < PeerMinPeers {
-			t.Logf("len(peer.Peers) == %d; want >= %d", len(peer.Peers), PeerMinPeers)
+		if len(peer.Peers) < DefaultConfig.Controller.MinPeers {
+			t.Logf("len(peer.Peers) == %d; want >= %d", len(peer.Peers), DefaultConfig.Controller.MinPeers)
 		}
 	}
 }
@@ -235,8 +235,8 @@ func TestControllerFindLowPeersStar(t *testing.T) {
 	fail. Therefore, log instead of mark as error.
 	*/
 	for _, peer := range peers {
-		if len(peer.Peers) < PeerMinPeers {
-			t.Logf("len(peer.Peers) == %d; want >= %d", len(peer.Peers), PeerMinPeers)
+		if len(peer.Peers) < DefaultConfig.Controller.MinPeers {
+			t.Logf("len(peer.Peers) == %d; want >= %d", len(peer.Peers), DefaultConfig.Controller.MinPeers)
 		}
 	}
 }
@@ -278,8 +278,8 @@ func TestControllerFindLowPeersFull(t *testing.T) {
 	fail. Therefore, log instead of mark as error.
 	*/
 	for _, peer := range peers {
-		if len(peer.Peers) < PeerMinPeers {
-			t.Logf("len(peer.Peers) == %d; want >= %d", len(peer.Peers), PeerMinPeers)
+		if len(peer.Peers) < DefaultConfig.Controller.MinPeers {
+			t.Logf("len(peer.Peers) == %d; want >= %d", len(peer.Peers), DefaultConfig.Controller.MinPeers)
 		}
 	}
 }

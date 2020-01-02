@@ -110,14 +110,16 @@ func (p *Peer) GetPeers() ([]Addr, error) {
 
 //IsIrrecoverable returns if a peer is considered as permanently unreachable
 func (p *Peer) IsIrrecoverable() bool {
-	return p.LastSuccess+PeerMaxPingDelay < time.Now().Unix()
+	//Divide by 1000 to convert from ms to seconds
+	return p.LastSuccess+(p.config.Node.MaxPingDelay/1000) < time.Now().Unix()
 }
 
 /*IsCtrlIrrecoverable returns if a peer is considered as permanently
 unreachable for a controller node.
 */
 func (p *Peer) IsCtrlIrrecoverable() bool {
-	return p.LastSuccess+ControllerMaxPingDelay < time.Now().Unix()
+	//Divide by 1000 to convert from ms to seconds
+	return p.LastSuccess+(p.config.Controller.MaxPingDelay/1000) < time.Now().Unix()
 }
 
 /*IsUnreachable returns if the peer is considered unreachable
@@ -126,7 +128,7 @@ If the number of attempts to contact the peer exceeds the PeerMaxAttempts
 threshold, the peer is considered unreachable.
 */
 func (p *Peer) IsUnreachable() bool {
-	return p.Attempts >= PeerMaxAttempts
+	return p.Attempts >= p.config.Peer.MaxAttempts
 }
 
 //Ping checks if the peer is reachable and retrieves its status
@@ -169,7 +171,7 @@ func (p *Peer) Send(state State) {
 	}
 
 	//Try to send the state to the peer
-	for i := 0; i <= PeerMaxRetries; i++ {
+	for i := 0; i <= p.config.Peer.MaxRetries; i++ {
 		res, err := http.Post(p.config.Protocol+"://"+p.Addr.String(), "application/json", bytes.NewBuffer(jsonVal))
 		if err == nil && res.StatusCode == http.StatusOK {
 			p.UpdateStatus(true)
@@ -177,7 +179,7 @@ func (p *Peer) Send(state State) {
 		}
 
 		//TODO: add jitter
-		time.Sleep(PeerBackoffDuration * (1 << i))
+		time.Sleep(p.config.Peer.BackoffDuration * time.Millisecond * (1 << i))
 	}
 
 	/*Set the status as failed for this message.
@@ -201,7 +203,7 @@ func (p *Peer) SendPeeringRequest(addr Addr) {
 	}
 
 	//Try to send a peering request to the peer
-	for i := 0; i <= PeerMaxRetries; i++ {
+	for i := 0; i <= p.config.Peer.MaxRetries; i++ {
 		res, err := http.Post(p.config.Protocol+"://"+p.Addr.String()+"/peers", "application/json", bytes.NewBuffer(jsonVal))
 		if err == nil && res.StatusCode == http.StatusOK {
 			p.UpdateStatus(true)
@@ -209,7 +211,7 @@ func (p *Peer) SendPeeringRequest(addr Addr) {
 		}
 
 		//TODO: add jitter
-		time.Sleep(PeerBackoffDuration * (1 >> i))
+		time.Sleep(p.config.Peer.BackoffDuration * (1 >> i))
 	}
 
 	log.WithFields(log.Fields{"peer": p, "func": "SendPeeringRequest"}).Warn("Failed to send peering request")

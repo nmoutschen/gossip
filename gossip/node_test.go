@@ -128,8 +128,8 @@ func TestNodePeerSendStateWorker(t *testing.T) {
 	}{
 		{0, 0},
 		{1, 1},
-		{PeerMaxRecipients, PeerMaxRecipients},
-		{PeerMaxRecipients + 1, PeerMaxRecipients},
+		{DefaultConfig.Node.MaxRecipients, DefaultConfig.Node.MaxRecipients},
+		{DefaultConfig.Node.MaxRecipients + 1, DefaultConfig.Node.MaxRecipients},
 	}
 
 	var receivedCount int
