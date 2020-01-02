@@ -26,6 +26,8 @@ type Node struct {
 	fetchStateChan chan *Peer
 	//addPeerChan is a channel to receive peering requests
 	addPeerChan chan Addr
+	//deletePeerChan is a channel to receive peer deletion requests
+	deletePeerChan chan Addr
 	//peerStateChan is a channel to receive state updates that need to be propagated to peers
 	peerStateChan chan State
 	//stateChan is a channel to receive state updates
@@ -47,6 +49,7 @@ func NewNode(config *Config) *Node {
 
 		fetchStateChan: make(chan *Peer, 8),
 		addPeerChan:    make(chan Addr, 8),
+		deletePeerChan: make(chan Addr, 8),
 		peerStateChan:  make(chan State, 8),
 		stateChan:      make(chan State, 8),
 
@@ -60,17 +63,17 @@ func NewNode(config *Config) *Node {
 
 //AddPeer adds a new peer if there are no known peers with the same Addr
 func (n *Node) AddPeer(addr Addr) {
-	log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Received peering request")
+	log.WithFields(log.Fields{"node": n, "addr": addr, "func": "AddPeer"}).Info("Received peering request")
 
 	//Skip if self.
 	if addr == n.Addr() {
-		log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Skip self-peering request")
+		log.WithFields(log.Fields{"node": n, "addr": addr, "func": "AddPeer"}).Info("Skip self-peering request")
 		return
 	}
 
 	//Skip if already known.
 	if _, found := n.FindPeer(addr); found {
-		log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Skip known peer")
+		log.WithFields(log.Fields{"node": n, "addr": addr, "func": "AddPeer"}).Info("Skip known peer")
 		return
 	}
 
@@ -88,6 +91,22 @@ func (n *Node) Addr() Addr {
 		IP:   n.IP,
 		Port: n.Port,
 	}
+}
+
+//DeletePeer deletes a peer matching the given address
+func (n *Node) DeletePeer(addr Addr) {
+	log.WithFields(log.Fields{"node": n, "addr": addr, "func": "DeletePeer"}).Info("Received peer deletion request")
+
+	//Find the peer's position
+	pos, found := n.FindPeer(addr)
+	if !found {
+		log.WithFields(log.Fields{"node": n, "addr": addr, "func": "AddPeer"}).Info("Skip unknown peer")
+		return
+	}
+
+	//Delete the peer from the slice of peers
+	n.Peers[pos] = n.Peers[0]
+	n.Peers = n.Peers[1:]
 }
 
 /*FindPeer looks up known peers and returns if there is a peer matching the
@@ -181,6 +200,7 @@ func (n *Node) PingPeers() {
 func (n *Node) Run() {
 	//Start workers
 	go n.addPeerWorker()
+	go n.deletePeerWorker()
 	go n.fetchStateWorker()
 	go n.peerSendStateWorker()
 	go n.pingWorker()
@@ -255,7 +275,7 @@ func (n *Node) fetchStateWorker() {
 	}
 }
 
-/*addPeerWorker waits for new Addrs on the n.addPeerChan channel and process
+/*addPeerWorker waits for new Addrs on the n.addPeerChan channel and processes
 them.
 
 If the node is known, there is no need to do anything, so the message can
@@ -273,6 +293,17 @@ func (n *Node) addPeerWorker() {
 	for {
 		addr := <-n.addPeerChan
 		n.AddPeer(addr)
+	}
+}
+
+/*deletePeerWorker waits for new Addrs on the n.deletePeerChan channel and
+processes them.
+
+*/
+func (n *Node) deletePeerWorker() {
+	for {
+		addr := <-n.deletePeerChan
+		n.DeletePeer(addr)
 	}
 }
 

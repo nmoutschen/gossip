@@ -53,6 +53,19 @@ func TestNodeAddPeer(t *testing.T) {
 	}
 }
 
+func TestNodeDeletePeer(t *testing.T) {
+	//Setup the node and peer
+	n := NewNode(nil)
+	addr := Addr{"127.0.0.1", 8080}
+	n.Peers = []*Peer{NewPeer(addr, nil)}
+
+	n.DeletePeer(addr)
+
+	if len(n.Peers) != 0 {
+		t.Errorf("len(n.Peers) == %d; want %d", len(n.Peers), 1)
+	}
+}
+
 func TestNodeFindPeer(t *testing.T) {
 	n := NewNode(nil)
 
