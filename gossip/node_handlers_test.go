@@ -60,6 +60,34 @@ func TestNodePeersHandlerPost(t *testing.T) {
 	}
 }
 
+func TestNodePeersHandlerPostNoIP(t *testing.T) {
+	//Prepare address and node
+	addr := Addr{"", 8081}
+	n := NewNode(nil)
+	reqBody, _ := json.Marshal(addr)
+
+	//Send request
+	req := httptest.NewRequest("POST", n.URL()+"/peers", bytes.NewBuffer(reqBody))
+	w := httptest.NewRecorder()
+	n.peersHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
+	} else {
+		rAddr := <-n.addPeerChan
+
+		if rAddr.IP != req.RemoteAddr {
+			t.Errorf("rAddr.IP == %s; want %s", rAddr.IP, req.RemoteAddr)
+		}
+
+		if rAddr.Port != addr.Port {
+			t.Errorf("rAddr.Port == %d; want %d", rAddr.Port, addr.Port)
+		}
+	}
+}
+
 func TestNodePeersHandlerDelete(t *testing.T) {
 	//Prepare address and node
 	addr := Addr{"127.0.0.1", 8081}
@@ -82,7 +110,34 @@ func TestNodePeersHandlerDelete(t *testing.T) {
 			t.Errorf("rAddr == %v; want %v", rAddr, addr)
 		}
 	}
+}
 
+func TestNodePeersHandlerDeleteNoIP(t *testing.T) {
+	//Prepare address and node
+	addr := Addr{"", 8081}
+	n := NewNode(nil)
+	reqBody, _ := json.Marshal(addr)
+
+	//Send request
+	req := httptest.NewRequest("DELETE", n.URL()+"/peers", bytes.NewBuffer(reqBody))
+	w := httptest.NewRecorder()
+	n.peersHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
+	} else {
+		rAddr := <-n.deletePeerChan
+
+		if rAddr.IP != req.RemoteAddr {
+			t.Errorf("rAddr.IP == %s; want %s", rAddr.IP, req.RemoteAddr)
+		}
+
+		if rAddr.Port != addr.Port {
+			t.Errorf("rAddr.Port == %d; want %d", rAddr.Port, addr.Port)
+		}
+	}
 }
 
 func TestNodePeersHandlerOptions(t *testing.T) {
