@@ -284,6 +284,39 @@ func TestNodePingPeersUnreachable(t *testing.T) {
 	}
 }
 
+func TestNodeShutdown(t *testing.T) {
+	//Setup node
+	n := NewNode(nil)
+
+	//Setup peer server
+	var received bool
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "DELETE" {
+			t.Errorf("r.Method == %s; want %s", r.Method, "DELETE")
+		}
+		if r.URL.Path != "/peers" {
+			t.Errorf("r.URL.PATH == %s; want %s", r.URL.Path, "/peers")
+		}
+		received = true
+		response(w, r, http.StatusOK, "Peering request received")
+	}))
+	defer func() { testServer.Close() }()
+	peer := NewPeer(parseURL(testServer.URL), nil)
+
+	n.Peers = []*Peer{peer}
+
+	n.Shutdown()
+
+	//Check results
+	if len(n.Peers) != 0 {
+		t.Errorf("len(n.Peers) == %d; want %d", len(n.Peers), 0)
+	}
+
+	if !received {
+		t.Errorf("HTTP Server did not receive a request")
+	}
+}
+
 func TestNodeStateWorker(t *testing.T) {
 	state := State{time.Now().UnixNano(), "Test data"}
 	n := NewNode(nil)

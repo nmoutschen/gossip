@@ -50,6 +50,29 @@ func TestPeerCanPeer(t *testing.T) {
 	}
 }
 
+func TestPeerDelete(t *testing.T) {
+	//Setup node
+	var received bool
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "DELETE" {
+			t.Errorf("r.Method == %s; want %s", r.Method, "DELETE")
+		}
+		if r.URL.Path != "/peers" {
+			t.Errorf("r.URL.PATH == %s; want %s", r.URL.Path, "/peers")
+		}
+		received = true
+		response(w, r, http.StatusOK, "Peering request received")
+	}))
+	defer func() { testServer.Close() }()
+	peer := NewPeer(parseURL(testServer.URL), nil)
+
+	peer.SendPeerDeletionRequest(Addr{"127.0.0.1", 8080})
+
+	if !received {
+		t.Errorf("HTTP Server did not receive a request")
+	}
+}
+
 func TestPeerGet(t *testing.T) {
 	testCases := []State{
 		{0, "Test Data"},
