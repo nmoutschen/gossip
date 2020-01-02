@@ -161,6 +161,7 @@ func TestNodePeerSendStateWorker(t *testing.T) {
 			Message: "State received",
 		})
 	}))
+	defer func() { testServer.Close() }()
 	peer := NewPeer(parseURL(testServer.URL), nil)
 
 	state := State{time.Now().UnixNano(), "Test data"}

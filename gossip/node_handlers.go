@@ -3,6 +3,7 @@ package gossip
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -35,6 +36,13 @@ func (n *Node) peersDeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	/*Infer that the client node does not know its IP address and use the one
+	from the HTTP request instead.
+	*/
+	if addr.IP == "" {
+		addr.IP = strings.SplitN(r.RemoteAddr, ":", 1)[0]
+	}
+
 	n.deletePeerChan <- *addr
 	response(w, r, http.StatusOK, "Peer deletion request received")
 }
@@ -60,6 +68,13 @@ func (n *Node) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{"node": n, "func": "peersPostHandler"}).Warnf("Failed to decode request body: %s", err.Error())
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
 		return
+	}
+
+	/*Infer that the client node does not know its IP address and use the one
+	from the HTTP request instead.
+	*/
+	if addr.IP == "" {
+		addr.IP = strings.SplitN(r.RemoteAddr, ":", 1)[0]
 	}
 
 	n.addPeerChan <- *addr
