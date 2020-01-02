@@ -1,0 +1,9 @@
+FROM golang:1.13
+
+WORKDIR /go/src/app
+COPY control control
+COPY gossip gossip
+
+RUN cd control/ && go mod download && go build .
+CMD ["control/control"]
+EXPOSE 7080
