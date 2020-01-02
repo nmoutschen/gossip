@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"fmt"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -11,9 +12,15 @@ import (
 
 //Node represents the management unit for this node
 type Node struct {
-	Addr  Addr    `json:"addr"`
-	Peers []*Peer `json:"peers"`
-	State State   `json:"state"`
+	//IP is the IP address of the Node
+	IP string
+	//Port is the port for the HTTP server on the Node
+	Port int
+
+	//Peers is the slice of peers known to the node
+	Peers []*Peer
+	//State is the current internal data state of the node
+	State State
 
 	//fetchStateChan is a channel to force fetch updates from other peers
 	fetchStateChan chan *Peer
@@ -23,17 +30,27 @@ type Node struct {
 	peerStateChan chan State
 	//stateChan is a channel to receive state updates
 	stateChan chan State
+
+	//config stores the configuration parameters
+	config *Config
 }
 
 //NewNode creates a new Node
-func NewNode(addr Addr) *Node {
+func NewNode(config *Config) *Node {
+	if config == nil {
+		config = DefaultConfig
+	}
+
 	n := &Node{
-		Addr: addr,
+		IP:   config.Node.IP,
+		Port: config.Node.Port,
 
 		fetchStateChan: make(chan *Peer, 8),
 		addPeerChan:    make(chan Addr, 8),
 		peerStateChan:  make(chan State, 8),
 		stateChan:      make(chan State, 8),
+
+		config: config,
 	}
 
 	log.WithFields(log.Fields{"node": n, "func": "NewNode"}).Info("Initializing node")
@@ -46,7 +63,7 @@ func (n *Node) AddPeer(addr Addr) {
 	log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Received peering request")
 
 	//Skip if self.
-	if addr == n.Addr {
+	if addr == n.Addr() {
 		log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Skip self-peering request")
 		return
 	}
@@ -58,13 +75,19 @@ func (n *Node) AddPeer(addr Addr) {
 	}
 
 	//Add the peer to the list of known peers.
-	peer := &Peer{
-		Addr: addr,
-	}
+	peer := NewPeer(addr, n.config)
 	n.Peers = append(n.Peers, peer)
 
 	//Send a peering request.
-	go peer.SendPeeringRequest(n.Addr)
+	go peer.SendPeeringRequest(n.Addr())
+}
+
+//Addr returns an Addr representing the node
+func (n *Node) Addr() Addr {
+	return Addr{
+		IP:   n.IP,
+		Port: n.Port,
+	}
 }
 
 /*FindPeer looks up known peers and returns if there is a peer matching the
@@ -89,10 +112,10 @@ func (n *Node) PeerSendState(state State) int {
 	var peers []*Peer
 	//If there are too many peers, need to limit to PeerMaxRecipients peers
 	//chosen randomly.
-	if len(n.Peers) > PeerMaxRecipients {
+	if len(n.Peers) > n.config.Node.MaxRecipients {
 		for _, i := range rand.Perm(len(n.Peers)) {
 			peers = append(peers, n.Peers[i])
-			if len(peers) >= PeerMaxRecipients {
+			if len(peers) >= n.config.Node.MaxRecipients {
 				break
 			}
 		}
@@ -170,12 +193,17 @@ func (n *Node) Run() {
 
 	//Run HTTP server
 	log.WithFields(log.Fields{"node": n, "func": "Run"}).Info("Starting node")
-	log.WithFields(log.Fields{"node": n, "func": "Run"}).Fatal(http.ListenAndServe(n.Addr.String(), nil))
+	log.WithFields(log.Fields{"node": n, "func": "Run"}).Fatal(http.ListenAndServe(n.String(), nil))
 }
 
-//String returns a string representation of the address of the node
-func (n Node) String() string {
-	return n.Addr.String()
+//String returns a string representation of the node
+func (n *Node) String() string {
+	return fmt.Sprintf("%s:%d", n.IP, n.Port)
+}
+
+//URL returns the complete URL for that node
+func (n *Node) URL() string {
+	return fmt.Sprintf("%s://%s:%d", n.config.Protocol, n.IP, n.Port)
 }
 
 /*UpdateState updates the internal state if it is older than the proposed
@@ -183,7 +211,7 @@ state.
 
 This returns true if the internal state has been updated.
 */
-func (n *Node) UpdateState(state State) bool {
+func (n *Node) UpdateState(state State) (State, bool) {
 	//New state received from the end-user
 	if state.Timestamp == 0 {
 		state.Timestamp = time.Now().UnixNano()
@@ -197,10 +225,10 @@ func (n *Node) UpdateState(state State) bool {
 	case state.Timestamp > n.State.Timestamp:
 		log.WithFields(log.Fields{"node": n, "state": state, "func": "stateWorker"}).Info("Received new state")
 		n.State = state
-		return true
+		return state, true
 	}
 
-	return false
+	return state, false
 }
 
 /*fetchStateWorker waits for peers on the n.fetchStateChan channel and
@@ -261,7 +289,7 @@ func (n *Node) peerSendStateWorker() {
 //pingWorker checks the status of all peers at regular interval.
 func (n *Node) pingWorker() {
 	for {
-		time.Sleep(PingDelay)
+		time.Sleep(n.config.Node.PingInterval)
 		n.PingPeers()
 	}
 }
@@ -273,7 +301,7 @@ func (n *Node) stateWorker() {
 	for {
 		state := <-n.stateChan
 
-		if n.UpdateState(state) {
+		if state, ok := n.UpdateState(state); ok {
 			n.peerStateChan <- state
 		}
 	}

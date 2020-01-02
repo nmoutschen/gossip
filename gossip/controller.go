@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"fmt"
 	"math/rand"
 	"net/http"
 	"sync"
@@ -11,23 +12,33 @@ import (
 
 //Controller represents a controller instance
 type Controller struct {
-	/*Addr contains the address (IP address and port) for the controller's
-	HTTP server
-	*/
-	Addr Addr
+	//IP is the IP address of the Controller
+	IP string
+	//Port is the port for the HTTP server on the controller
+	Port int
 	//Peers is a sync.Map[Addr]*Peer containing all known peers.
 	Peers *sync.Map
 
+	//addPeerChan is a channel to receive peering requests
 	addPeerChan chan Addr
+
+	//config stores the configuration parameters
+	config *Config
 }
 
 //NewController creates a new controller instance
-func NewController(addr Addr) *Controller {
+func NewController(config *Config) *Controller {
+	if config == nil {
+		config = DefaultConfig
+	}
+
 	c := &Controller{
-		Addr:  addr,
+		IP:    config.Controller.IP,
+		Port:  config.Controller.Port,
 		Peers: &sync.Map{},
 
 		addPeerChan: make(chan Addr, 8),
+		config:      config,
 	}
 
 	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Info("Initializing controller")
@@ -35,8 +46,8 @@ func NewController(addr Addr) *Controller {
 	return c
 }
 
-/*ConnectLowPeers will find peers for nodes that have less than PeerMinPeers
-peers.
+/*ConnectLowPeers will find peers for nodes that have less than
+c.config.Controller.MinPeers peers.
 
 To do so, we duplicate peers based on the number of missing connections,
 shuffle the slice, then pair them two by two.
@@ -51,7 +62,7 @@ func (c *Controller) ConnectLowPeers() {
 	*/
 	var lcPeers []*Peer
 	for _, peer := range c.FindLowPeers() {
-		for i := len(peer.Peers); i < PeerMinPeers; i++ {
+		for i := len(peer.Peers); i < c.config.Controller.MinPeers; i++ {
 			lcPeers = append(lcPeers, peer)
 		}
 	}
@@ -203,7 +214,7 @@ func (c *Controller) FindClusters() [][]*Peer {
 }
 
 /*FindLowPeers parse through the list of peers and return those who
-have less than PeerMinPeers peers.
+have less than c.config.Controller.MinPeers peers.
 */
 func (c *Controller) FindLowPeers() (lcPeers []*Peer) {
 	c.Peers.Range(func(_, value interface{}) bool {
@@ -213,7 +224,7 @@ func (c *Controller) FindLowPeers() (lcPeers []*Peer) {
 			return true
 		}
 
-		if len(peer.Peers) < PeerMinPeers {
+		if len(peer.Peers) < c.config.Controller.MinPeers {
 			lcPeers = append(lcPeers, peer)
 		}
 		return true
@@ -235,7 +246,7 @@ func (c *Controller) MergeClusters(clusters [][]*Peer) {
 	/*The number of connections cannot be greater than the number of peers in a
 	cluster.
 	*/
-	minPeers := PeerMinPeers
+	minPeers := c.config.Controller.MinPeers
 	for _, cluster := range clusters {
 		if len(cluster) < minPeers {
 			minPeers = len(cluster)
@@ -277,8 +288,8 @@ func (c *Controller) MergeClusters(clusters [][]*Peer) {
 			go origs[i].SendPeeringRequest(clusters[dPos][d].Addr)
 			/*Manually add the peers together, even though there is no proof
 			that the peering was successful at this team. It is necessary to do
-			this for the identification of nodes with less than PeerMinPeers
-			peers.
+			this for the identification of nodes with less than
+			c.config.Controller.MinPeers peers.
 			*/
 			origs[i].Peers = append(origs[i].Peers, clusters[dPos][d])
 			clusters[dPos][d].Peers = append(clusters[dPos][d].Peers, origs[i])
@@ -337,12 +348,17 @@ func (c *Controller) Run() {
 
 	//Run HTTP server
 	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Info("Starting controller")
-	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Fatal(http.ListenAndServe(c.Addr.String(), nil))
+	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Fatal(http.ListenAndServe(c.String(), nil))
 }
 
 //String returns a string representation of the controller
 func (c *Controller) String() string {
-	return c.Addr.String()
+	return fmt.Sprintf("%s:%d", c.IP, c.Port)
+}
+
+//URL returns the complete URL for that controller
+func (c *Controller) URL() string {
+	return fmt.Sprintf("%s://%s:%d", c.config.Protocol, c.IP, c.Port)
 }
 
 //addPeerWorker listens on the addPeerChan channel for new peers
@@ -358,7 +374,7 @@ func (c *Controller) addPeerWorker() {
 		}
 
 		//Add peers to the list of known peers
-		peer := NewPeer(addr)
+		peer := NewPeer(addr, c.config)
 		c.Peers.Store(addr, peer)
 	}
 }
@@ -382,7 +398,7 @@ func (c *Controller) removePeerWorker(removePeerChan chan Addr) {
 //scanWorker periodically scans peers
 func (c *Controller) scanWorker() {
 	for {
-		time.Sleep(ControllerScanDelay)
+		time.Sleep(c.config.Controller.ScanInterval)
 		log.WithFields(log.Fields{"controller": c, "func": "scanWorker"}).Info("Start scan")
 
 		//Scan all nodes
@@ -399,7 +415,7 @@ func (c *Controller) scanWorker() {
 		//Merge clusters
 		c.MergeClusters(clusters)
 
-		//Connect nodes with less than PeerMinPeers peers.
+		//Connect nodes with less than c.config.Controller.MinPeers peers.
 		c.ConnectLowPeers()
 	}
 }
@@ -429,7 +445,7 @@ func (c *Controller) scanPeer(peer *Peer, scanned *sync.Map, wg *sync.WaitGroup)
 	//Parse peers of the peer
 	for _, addr := range peers {
 		//Load the peer
-		iSubPeer, _ := c.Peers.LoadOrStore(addr, NewPeer(addr))
+		iSubPeer, _ := c.Peers.LoadOrStore(addr, NewPeer(addr, c.config))
 		subPeer, ok := iSubPeer.(*Peer)
 		if !ok {
 			log.WithFields(log.Fields{"controller": c, "func": "scanPeer", "peer": peer, "subPeer": subPeer}).Warn("Failed to assert subPeer")

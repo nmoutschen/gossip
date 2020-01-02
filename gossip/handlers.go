@@ -6,15 +6,15 @@ import (
 )
 
 //corsHeadersResponse sets up headers for CORS
-func corsHeadersResponse(w *http.ResponseWriter, r *http.Request, methods string) {
-	(*w).Header().Add("Access-Control-Allow-Origin", CorsAllowOrigin)
-	(*w).Header().Add("Access-Control-Allow-Headers", CorsAllowHeaders)
+func corsHeadersResponse(w *http.ResponseWriter, r *http.Request, config *Config, methods string) {
+	(*w).Header().Add("Access-Control-Allow-Origin", config.Cors.AllowOrigin)
+	(*w).Header().Add("Access-Control-Allow-Headers", config.Cors.AllowHeaders)
 	(*w).Header().Add("Access-Control-Allow-Methods", methods)
 }
 
 //optionsResponse sends a CORS pre-flight OPTIONS request
-func corsOptionsResponse(w http.ResponseWriter, r *http.Request, methods string) {
-	corsHeadersResponse(&w, r, methods)
+func corsOptionsResponse(w http.ResponseWriter, r *http.Request, config *Config, methods string) {
+	corsHeadersResponse(&w, r, config, methods)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(""))
 }

@@ -9,13 +9,13 @@ import (
 
 //peersHandler handles requests to the '/peers' path
 func (n *Node) peersHandler(w http.ResponseWriter, r *http.Request) {
-	corsHeadersResponse(&w, r, "GET, POST")
+	corsHeadersResponse(&w, r, n.config, "GET, POST")
 	if r.Method == http.MethodGet {
 		n.peersGetHandler(w, r)
 	} else if r.Method == http.MethodPost {
 		n.peersPostHandler(w, r)
 	} else if r.Method == http.MethodOptions {
-		corsOptionsResponse(w, r, "GET, POST")
+		corsOptionsResponse(w, r, n.config, "GET, POST")
 	} else {
 		methodNotAllowedHandler(w, r)
 	}
@@ -50,13 +50,13 @@ func (n *Node) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 
 //rootHandler handles requests to the '/' path
 func (n *Node) rootHandler(w http.ResponseWriter, r *http.Request) {
-	corsHeadersResponse(&w, r, "GET, POST")
+	corsHeadersResponse(&w, r, n.config, "GET, POST")
 	if r.Method == http.MethodGet {
 		n.rootGetHandler(w, r)
 	} else if r.Method == http.MethodPost {
 		n.rootPostHandler(w, r)
 	} else if r.Method == http.MethodOptions {
-		corsOptionsResponse(w, r, "GET, POST")
+		corsOptionsResponse(w, r, n.config, "GET, POST")
 	} else {
 		methodNotAllowedHandler(w, r)
 	}
@@ -75,7 +75,7 @@ func (n *Node) rootPostHandler(w http.ResponseWriter, r *http.Request) {
 	state := &State{}
 
 	if err := json.NewDecoder(r.Body).Decode(state); err != nil {
-		log.WithFields(log.Fields{"node": n, "func": "rootPostHandler"}).Warn("Failed to decode request body")
+		log.WithFields(log.Fields{"node": n, "func": "rootPostHandler"}).Warnf("Failed to decode request body: %s", err.Error())
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
 		return
 	}
@@ -86,9 +86,9 @@ func (n *Node) rootPostHandler(w http.ResponseWriter, r *http.Request) {
 
 //statusHandler handles requests to '/status'
 func (n *Node) statusHandler(w http.ResponseWriter, r *http.Request) {
-	corsHeadersResponse(&w, r, "GET")
+	corsHeadersResponse(&w, r, n.config, "GET")
 	if r.Method == http.MethodOptions {
-		corsOptionsResponse(w, r, "GET")
+		corsOptionsResponse(w, r, n.config, "GET")
 		return
 	} else if r.Method != http.MethodGet {
 		log.WithFields(log.Fields{"node": n, "func": "statusHandler"}).Info("Received GET /status")

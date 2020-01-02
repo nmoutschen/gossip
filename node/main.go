@@ -1,39 +1,28 @@
 package main
 
 import (
+	"log"
 	"math/rand"
-	"os"
-	"strconv"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/nmoutschen/gossip/gossip"
 )
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	node := gossip.NewNode(gossip.Addr{
-		IP:   getIP(),
-		Port: getPort(),
-	})
+	config := getConfig()
+	node := gossip.NewNode(config)
 	node.Run()
 }
 
-func getIP() string {
-	ip, ok := os.LookupEnv("GOSSIP_IP")
-	if !ok {
-		return "127.0.0.1"
-	}
-	return ip
-}
+func getConfig() *gossip.Config {
+	config := new(gossip.Config)
 
-func getPort() int {
-	sPort, ok := os.LookupEnv("GOSSIP_PORT")
-	if !ok {
-		return 8080
-	}
-	port, err := strconv.Atoi(sPort)
+	err := envconfig.Process("gossip", config)
 	if err != nil {
-		return 8080
+		log.Fatal(err.Error())
 	}
-	return port
+
+	return config
 }

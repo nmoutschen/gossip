@@ -9,16 +9,18 @@ import (
 )
 
 func TestNewNode(t *testing.T) {
-	addr := Addr{"127.0.0.1", 8080}
-	n := NewNode(addr)
+	n := NewNode(nil)
 
-	if n.Addr != addr {
-		t.Errorf("n.Addr == %v; want %v", n.Addr, addr)
+	if n.IP != DefaultConfig.Node.IP {
+		t.Errorf("n.IP == %s; want %s", n.IP, DefaultConfig.Node.IP)
+	}
+	if n.Port != DefaultConfig.Node.Port {
+		t.Errorf("n.Port == %d; want %d", n.Port, DefaultConfig.Node.Port)
 	}
 }
 
 func TestNodeAddPeer(t *testing.T) {
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(nil)
 	addr := Addr{"127.0.0.1", 8081}
 
 	// Test if the node skips itself
@@ -52,12 +54,12 @@ func TestNodeAddPeer(t *testing.T) {
 }
 
 func TestNodeFindPeer(t *testing.T) {
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(nil)
 
-	peer1 := NewPeer(Addr{"127.0.0.1", 8081})
-	peer2 := NewPeer(Addr{"127.0.0.1", 8082})
-	peer3 := NewPeer(Addr{"127.0.0.1", 8083})
-	peer4 := NewPeer(Addr{"127.0.0.1", 8084})
+	peer1 := NewPeer(Addr{"127.0.0.1", 8081}, nil)
+	peer2 := NewPeer(Addr{"127.0.0.1", 8082}, nil)
+	peer3 := NewPeer(Addr{"127.0.0.1", 8083}, nil)
+	peer4 := NewPeer(Addr{"127.0.0.1", 8084}, nil)
 
 	testCases := []struct {
 		Peers []*Peer
@@ -102,10 +104,10 @@ func TestNodeFetchStateWorker(t *testing.T) {
 	}))
 	defer func() { testServer.Close() }()
 
-	peer := NewPeer(parseURL(testServer.URL))
+	peer := NewPeer(parseURL(testServer.URL), nil)
 	peer.LastState = state.Timestamp
 
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(nil)
 	n.Peers = append(n.Peers, peer)
 
 	go n.fetchStateWorker()
@@ -128,8 +130,8 @@ func TestNodePeerSendStateWorker(t *testing.T) {
 	}{
 		{0, 0},
 		{1, 1},
-		{PeerMaxRecipients, PeerMaxRecipients},
-		{PeerMaxRecipients + 1, PeerMaxRecipients},
+		{DefaultConfig.Node.MaxRecipients, DefaultConfig.Node.MaxRecipients},
+		{DefaultConfig.Node.MaxRecipients + 1, DefaultConfig.Node.MaxRecipients},
 	}
 
 	var receivedCount int
@@ -146,10 +148,10 @@ func TestNodePeerSendStateWorker(t *testing.T) {
 			Message: "State received",
 		})
 	}))
-	peer := NewPeer(parseURL(testServer.URL))
+	peer := NewPeer(parseURL(testServer.URL), nil)
 
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(nil)
 
 	for i, testCase := range testCases {
 		for i := 0; i < testCase.Recipients; i++ {
@@ -178,7 +180,7 @@ func TestNodePeerSendStateWorker(t *testing.T) {
 func TestNodePingPeers(t *testing.T) {
 	//Initialize peer server
 	var received bool
-	peer := &Peer{}
+	peer := &Peer{config: DefaultConfig}
 	peer.UpdateStatus(true)
 	peer.UpdateStatus(false)
 	peer.LastState = time.Now().UnixNano()
@@ -199,7 +201,7 @@ func TestNodePingPeers(t *testing.T) {
 	peer.Addr = parseURL(testServer.URL)
 
 	//Initialize node
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(nil)
 	n.Peers = append(n.Peers, peer)
 
 	//Ping all peers
@@ -225,7 +227,7 @@ func TestNodePingPeers(t *testing.T) {
 func TestNodePingPeersUnreachable(t *testing.T) {
 	//Initialize peer
 	var received bool
-	peer := &Peer{}
+	peer := &Peer{config: DefaultConfig}
 	peer.Attempts = 10
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
@@ -244,7 +246,7 @@ func TestNodePingPeersUnreachable(t *testing.T) {
 	peer.Addr = parseURL(testServer.URL)
 
 	//Initialize node
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(nil)
 	n.Peers = append(n.Peers, peer)
 
 	//Ping all peers
@@ -271,7 +273,7 @@ func TestNodePingPeersUnreachable(t *testing.T) {
 
 func TestNodeStateWorker(t *testing.T) {
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(nil)
 
 	go n.stateWorker()
 	n.stateChan <- state
@@ -302,9 +304,9 @@ func TestNodeUpdateState(t *testing.T) {
 	}
 
 	for i, testCase := range testCases {
-		n := NewNode(Addr{"127.0.0.1", 8080})
+		n := NewNode(nil)
 		n.UpdateState(origState)
-		updated := n.UpdateState(testCase.State)
+		_, updated := n.UpdateState(testCase.State)
 
 		if updated != testCase.Expected {
 			t.Errorf("n.UpdateState() == %t for test case %d; want %t", updated, i, testCase.Expected)

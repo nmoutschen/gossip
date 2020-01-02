@@ -24,33 +24,33 @@ __Start a data node__
 ```bash
 cd node/
 # Set environment variables
-export GOSSIP_IP=127.0.0.1
-export GOSSIP_PORT=8080
+export GOSSIP_NODE_IP=127.0.0.1
+export GOSSIP_NODE_PORT=8080
 go run .
 ```
 
 __Push a new data state__
 
 ```bash
-curl -X POST -d '{"data": "Hello, world"}' http://$GOSSIP_IP:$GOSSIP_PORT
+curl -X POST -d '{"data": "Hello, world"}' http://$GOSSIP_NODE_IP:$GOSSIP_NODE_PORT
 ```
 
 __Retrieve latest known data state__
 
 ```bash
-curl http://$GOSSIP_IP:$GOSSIP_PORT
+curl http://$GOSSIP_NODE_IP:$GOSSIP_NODE_PORT
 ```
 
 __Retrieve the list of peers__
 
 ```bash
-curl http://$GOSSIP_IP:$GOSSIP_PORT/peers
+curl http://$GOSSIP_NODE_IP:$GOSSIP_NODE_PORT/peers
 ```
 
 __Add a peer__
 
 ```bash
-curl -X POST -d '{"ip": "127.0.0.1", "port": 8081}' http://$GOSSIP_IP:$GOSSIP_PORT/peers
+curl -X POST -d '{"ip": "127.0.0.1", "port": 8081}' http://$GOSSIP_NODE_IP:$GOSSIP_NODE_PORT/peers
 ```
 
 
@@ -61,15 +61,15 @@ __Start a controller node__
 ```bash
 cd control/
 # Set environment variables
-export GOSSIP_IP=127.0.0.1
-export GOSSIP_PORT=7080
+export GOSSIP_CONTROLLER_IP=127.0.0.1
+export GOSSIP_CONTROLLER_PORT=7080
 go run .
 ```
 
 __Retrieve the graph of data nodes__
 
 ```bash
-curl http://$GOSSIP_IP:$GOSSIP_PORT/peers
+curl http://$GOSSIP_CONTROLLER_IP:$GOSSIP_CONTROLLER_PORT/peers
 ```
 
 __Add a data node__
@@ -77,7 +77,7 @@ __Add a data node__
 If there are other nodes peered to that one, they will be automatically discovered by the scheduled scan operation from the controller node.
 
 ```bash
-curl -X POST -d '{"ip": "127.0.0.1", "port": 8080}' http://$GOSSIP_IP:$GOSSIP_PORT/peers
+curl -X POST -d '{"ip": "127.0.0.1", "port": 8080}' http://$GOSSIP_CONTROLLER_IP:$GOSSIP_CONTROLLER_PORT/peers
 ```
 
 ## Design considerations
