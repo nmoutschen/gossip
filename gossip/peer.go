@@ -235,7 +235,7 @@ func (p *Peer) SendPeeringRequest(addr Addr) {
 /*SendPeerDeletionRequest sends a request to delete the addr from the list of
 known peers.*/
 func (p *Peer) SendPeerDeletionRequest(addr Addr) {
-	log.WithFields(log.Fields{"peer": p, "func": "SendPeerDeletionRequest"}).Infof("Sending peering request with %v", addr)
+	log.WithFields(log.Fields{"peer": p, "func": "SendPeerDeletionRequest"}).Infof("Sending peer deletion request to %v", addr)
 
 	jsonVal, err := json.Marshal(addr)
 	if err != nil {
@@ -248,7 +248,7 @@ func (p *Peer) SendPeerDeletionRequest(addr Addr) {
 		req, err := http.NewRequest("DELETE", p.URL()+"/peers", bytes.NewBuffer(jsonVal))
 		req.Header.Add("Content-Type", "application/json")
 		if err != nil {
-			log.WithFields(log.Fields{"peer": p, "func": "SendPeerDeletionRequest", "addr": addr}).Warn("Failed to create request: %s", err.Error())
+			log.WithFields(log.Fields{"peer": p, "func": "SendPeerDeletionRequest", "addr": addr}).Warnf("Failed to create request: %s", err.Error())
 			return
 		}
 

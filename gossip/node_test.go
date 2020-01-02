@@ -308,10 +308,6 @@ func TestNodeShutdown(t *testing.T) {
 	n.Shutdown()
 
 	//Check results
-	if len(n.Peers) != 0 {
-		t.Errorf("len(n.Peers) == %d; want %d", len(n.Peers), 0)
-	}
-
 	if !received {
 		t.Errorf("HTTP Server did not receive a request")
 	}
