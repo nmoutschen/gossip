@@ -8,19 +8,24 @@ function ctrl_c() {
     exit
 }
 
-export NODE_PIDS=""
+# Controller node configuration
+export GOSSIP_CONTROLLER_SCANINTERVAL="3s"
+export GOSSIP_CONTROLLER_MINPEERS="3"
 
 # Start nodes
+export NODE_PIDS=""
 pushd ./node/
+go build .
 for i in {8080..8089}; do
-    GOSSIP_NODE_PORT=$i go run . &>/dev/null & export NODE_PIDS="$NODE_PIDS $!"
+    GOSSIP_NODE_PORT=$i ./node &>/dev/null & export NODE_PIDS="$NODE_PIDS $!"
 done
 popd
 echo "\$NODE_PIDS=$NODE_PIDS"
 
 # Start controller
 pushd ./control/
-GOSSIP_CONTROLLER_SCANINTERVAL="10s" go run . &
+go build .
+./control &
 export CONTROL_PID=$!
 echo "\$CONTROL_PID=$CONTROL_PID"
 popd
@@ -33,4 +38,19 @@ for i in {8080..8089}; do
     curl -X POST -d '{"ip": "127.0.0.1", "port": '$i'}' http://127.0.0.1:7080/peers
 done
 
-while true; do sleep 5; done
+# Wait for the controllers to connect all the nodes
+sleep 7s
+
+# Parse the graph
+for l in $(curl -s http://127.0.0.1:7080/peers | jq '.nodes[].peers | length'); do
+    if [ l \< $GOSSIP_CONTROLLER_MINPEERS ]; then
+        echo "Found node with less than $GOSSIP_CONTROLLER_MINPEERS peers"
+        kill $NODE_PIDS
+        kill $CONTROL_PID
+        exit 1
+    fi
+done
+
+echo "All node have $GOSSIP_CONTROLLER_MINPEERS peers or more"
+kill $NODE_PIDS
+kill $CONTROL_PID
