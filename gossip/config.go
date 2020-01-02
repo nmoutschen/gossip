@@ -14,6 +14,10 @@ type ControllerConfig struct {
 	/*ScanInterval is the delay (in ms) between two scans from a controller
 	instance*/
 	ScanInterval time.Duration `json:"scanInterval" yaml:"scanInterval"`
+	//IP address of the controller
+	IP string `json:"ip" yaml:"ip"`
+	//Port for the HTTP server on the controller
+	Port int `json:"port" yaml:"port"`
 }
 
 //CorsConfig represents the configuration properties for CORS
@@ -36,6 +40,10 @@ type NodeConfig struct {
 	MaxPingDelay int64 `json:"maxPingDelay" yaml:"maxPingDelay"`
 	//ScanInterval is the delay (in ms) between two pings from a node instance
 	PingInterval time.Duration `json:"pingInterval" yaml:"pingInterval"`
+	//IP address of the node
+	IP string `json:"ip" yaml:"ip"`
+	//Port for the HTTP server on the node
+	Port int `json:"port" yaml:"port"`
 }
 
 //PeerConfig represents the configuration properties for peers
@@ -68,6 +76,8 @@ var DefaultConfig *Config = &Config{
 		MaxPingDelay: 3600000, //1 hour (3 600 000 ms)
 		MinPeers:     3,
 		ScanInterval: 60000, //1 minute (60 000 ms)
+		IP:           "127.0.0.1",
+		Port:         7080,
 	},
 	Cors: CorsConfig{
 		AllowHeaders: "Accept, Content-Type, Content-Length, Accept-Encoding",
@@ -77,6 +87,8 @@ var DefaultConfig *Config = &Config{
 		MaxRecipients: 4,
 		MaxPingDelay:  300000, //5 minutes (300 000 ms)
 		PingInterval:  30000,  //30 seconds (30 000 ms)
+		IP:            "127.0.0.1",
+		Port:          8080,
 	},
 	Peer: PeerConfig{
 		BackoffDuration: 200, //200 ms

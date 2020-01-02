@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"fmt"
 	"math/rand"
 	"net/http"
 	"sync"
@@ -11,10 +12,10 @@ import (
 
 //Controller represents a controller instance
 type Controller struct {
-	/*Addr contains the address (IP address and port) for the controller's
-	HTTP server
-	*/
-	Addr Addr
+	//IP is the IP address of the Controller
+	IP string
+	//Port is the port for the HTTP server on the controller
+	Port int
 	//Peers is a sync.Map[Addr]*Peer containing all known peers.
 	Peers *sync.Map
 
@@ -26,13 +27,14 @@ type Controller struct {
 }
 
 //NewController creates a new controller instance
-func NewController(addr Addr, config *Config) *Controller {
+func NewController(config *Config) *Controller {
 	if config == nil {
 		config = DefaultConfig
 	}
 
 	c := &Controller{
-		Addr:  addr,
+		IP:    config.Controller.IP,
+		Port:  config.Controller.Port,
 		Peers: &sync.Map{},
 
 		addPeerChan: make(chan Addr, 8),
@@ -346,12 +348,17 @@ func (c *Controller) Run() {
 
 	//Run HTTP server
 	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Info("Starting controller")
-	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Fatal(http.ListenAndServe(c.Addr.String(), nil))
+	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Fatal(http.ListenAndServe(c.String(), nil))
 }
 
 //String returns a string representation of the controller
 func (c *Controller) String() string {
-	return c.Addr.String()
+	return fmt.Sprintf("%s:%d", c.IP, c.Port)
+}
+
+//URL returns the complete URL for that controller
+func (c *Controller) URL() string {
+	return fmt.Sprintf("%s://%s:%d", c.config.Protocol, c.IP, c.Port)
 }
 
 //addPeerWorker listens on the addPeerChan channel for new peers

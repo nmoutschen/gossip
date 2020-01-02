@@ -282,9 +282,9 @@ func TestPeerIsIrrecoverable(t *testing.T) {
 		LastSuccess int64
 	}{
 		{false, time.Now().Unix()},
-		{false, time.Now().Unix() - p.config.Node.MaxPingDelay + 5},
+		{false, time.Now().Unix() - (p.config.Node.MaxPingDelay / 1000) + 5},
 		{true, 0},
-		{true, time.Now().Unix() - p.config.Node.MaxPingDelay - 5},
+		{true, time.Now().Unix() - (p.config.Node.MaxPingDelay / 1000) - 5},
 	}
 
 	for _, testCase := range testCases {
@@ -302,9 +302,9 @@ func TestPeerIsCtrlIrrecoverable(t *testing.T) {
 		LastSuccess int64
 	}{
 		{false, time.Now().Unix()},
-		{false, time.Now().Unix() - DefaultConfig.Controller.MaxPingDelay + 5},
+		{false, time.Now().Unix() - (DefaultConfig.Controller.MaxPingDelay / 1000) + 5},
 		{true, 0},
-		{true, time.Now().Unix() - DefaultConfig.Controller.MaxPingDelay - 5},
+		{true, time.Now().Unix() - (DefaultConfig.Controller.MaxPingDelay / 1000) - 5},
 	}
 
 	for _, testCase := range testCases {

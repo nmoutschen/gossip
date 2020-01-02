@@ -11,12 +11,12 @@ import (
 func TestControllerPeersHandlerGet(t *testing.T) {
 	//Prepare peer and controller
 	peer := NewPeer(Addr{"127.0.0.1", 8080}, nil)
-	c := NewController(Addr{"127.0.0.1", 7080}, nil)
+	c := NewController(nil)
 	c.Peers.Store(peer.Addr, peer)
 	peer.Peers = []*Peer{peer}
 
 	//Send request
-	req := httptest.NewRequest("GET", "http://127.0.0.1:7080/peers", nil)
+	req := httptest.NewRequest("GET", c.URL()+"/peers", nil)
 	w := httptest.NewRecorder()
 	c.peersHandler(w, req)
 	res := w.Result()
@@ -51,7 +51,7 @@ func TestControllerPeersHandlerGet(t *testing.T) {
 func TestControllerPeersHandlerPost(t *testing.T) {
 	//Prepare addr and controller
 	addr := Addr{"127.0.0.1", 8080}
-	c := NewController(Addr{"127.0.0.1", 7080}, nil)
+	c := NewController(nil)
 	reqBody, _ := json.Marshal(addr)
 
 	//Send request

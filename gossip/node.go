@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"fmt"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -11,9 +12,15 @@ import (
 
 //Node represents the management unit for this node
 type Node struct {
-	Addr  Addr    `json:"addr"`
-	Peers []*Peer `json:"peers"`
-	State State   `json:"state"`
+	//IP is the IP address of the Node
+	IP string
+	//Port is the port for the HTTP server on the Node
+	Port int
+
+	//Peers is the slice of peers known to the node
+	Peers []*Peer
+	//State is the current internal data state of the node
+	State State
 
 	//fetchStateChan is a channel to force fetch updates from other peers
 	fetchStateChan chan *Peer
@@ -29,13 +36,14 @@ type Node struct {
 }
 
 //NewNode creates a new Node
-func NewNode(addr Addr, config *Config) *Node {
+func NewNode(config *Config) *Node {
 	if config == nil {
 		config = DefaultConfig
 	}
 
 	n := &Node{
-		Addr: addr,
+		IP:   config.Node.IP,
+		Port: config.Node.Port,
 
 		fetchStateChan: make(chan *Peer, 8),
 		addPeerChan:    make(chan Addr, 8),
@@ -55,7 +63,7 @@ func (n *Node) AddPeer(addr Addr) {
 	log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Received peering request")
 
 	//Skip if self.
-	if addr == n.Addr {
+	if addr == n.Addr() {
 		log.WithFields(log.Fields{"node": n, "addr": addr, "func": "addPeerWorker"}).Info("Skip self-peering request")
 		return
 	}
@@ -71,7 +79,15 @@ func (n *Node) AddPeer(addr Addr) {
 	n.Peers = append(n.Peers, peer)
 
 	//Send a peering request.
-	go peer.SendPeeringRequest(n.Addr)
+	go peer.SendPeeringRequest(n.Addr())
+}
+
+//Addr returns an Addr representing the node
+func (n *Node) Addr() Addr {
+	return Addr{
+		IP:   n.IP,
+		Port: n.Port,
+	}
 }
 
 /*FindPeer looks up known peers and returns if there is a peer matching the
@@ -177,12 +193,17 @@ func (n *Node) Run() {
 
 	//Run HTTP server
 	log.WithFields(log.Fields{"node": n, "func": "Run"}).Info("Starting node")
-	log.WithFields(log.Fields{"node": n, "func": "Run"}).Fatal(http.ListenAndServe(n.Addr.String(), nil))
+	log.WithFields(log.Fields{"node": n, "func": "Run"}).Fatal(http.ListenAndServe(n.String(), nil))
 }
 
-//String returns a string representation of the address of the node
-func (n Node) String() string {
-	return n.Addr.String()
+//String returns a string representation of the node
+func (n *Node) String() string {
+	return fmt.Sprintf("%s:%d", n.IP, n.Port)
+}
+
+//URL returns the complete URL for that node
+func (n *Node) URL() string {
+	return fmt.Sprintf("%s://%s:%d", n.config.Protocol, n.IP, n.Port)
 }
 
 /*UpdateState updates the internal state if it is older than the proposed

@@ -9,16 +9,18 @@ import (
 )
 
 func TestNewNode(t *testing.T) {
-	addr := Addr{"127.0.0.1", 8080}
-	n := NewNode(addr, nil)
+	n := NewNode(nil)
 
-	if n.Addr != addr {
-		t.Errorf("n.Addr == %v; want %v", n.Addr, addr)
+	if n.IP != DefaultConfig.Node.IP {
+		t.Errorf("n.IP == %s; want %s", n.IP, DefaultConfig.Node.IP)
+	}
+	if n.Port != DefaultConfig.Node.Port {
+		t.Errorf("n.Port == %d; want %d", n.Port, DefaultConfig.Node.Port)
 	}
 }
 
 func TestNodeAddPeer(t *testing.T) {
-	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
+	n := NewNode(nil)
 	addr := Addr{"127.0.0.1", 8081}
 
 	// Test if the node skips itself
@@ -52,7 +54,7 @@ func TestNodeAddPeer(t *testing.T) {
 }
 
 func TestNodeFindPeer(t *testing.T) {
-	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
+	n := NewNode(nil)
 
 	peer1 := NewPeer(Addr{"127.0.0.1", 8081}, nil)
 	peer2 := NewPeer(Addr{"127.0.0.1", 8082}, nil)
@@ -105,7 +107,7 @@ func TestNodeFetchStateWorker(t *testing.T) {
 	peer := NewPeer(parseURL(testServer.URL), nil)
 	peer.LastState = state.Timestamp
 
-	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
+	n := NewNode(nil)
 	n.Peers = append(n.Peers, peer)
 
 	go n.fetchStateWorker()
@@ -149,7 +151,7 @@ func TestNodePeerSendStateWorker(t *testing.T) {
 	peer := NewPeer(parseURL(testServer.URL), nil)
 
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
+	n := NewNode(nil)
 
 	for i, testCase := range testCases {
 		for i := 0; i < testCase.Recipients; i++ {
@@ -199,7 +201,7 @@ func TestNodePingPeers(t *testing.T) {
 	peer.Addr = parseURL(testServer.URL)
 
 	//Initialize node
-	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
+	n := NewNode(nil)
 	n.Peers = append(n.Peers, peer)
 
 	//Ping all peers
@@ -244,7 +246,7 @@ func TestNodePingPeersUnreachable(t *testing.T) {
 	peer.Addr = parseURL(testServer.URL)
 
 	//Initialize node
-	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
+	n := NewNode(nil)
 	n.Peers = append(n.Peers, peer)
 
 	//Ping all peers
@@ -271,7 +273,7 @@ func TestNodePingPeersUnreachable(t *testing.T) {
 
 func TestNodeStateWorker(t *testing.T) {
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
+	n := NewNode(nil)
 
 	go n.stateWorker()
 	n.stateChan <- state
@@ -302,7 +304,7 @@ func TestNodeUpdateState(t *testing.T) {
 	}
 
 	for i, testCase := range testCases {
-		n := NewNode(Addr{"127.0.0.1", 8080}, nil)
+		n := NewNode(nil)
 		n.UpdateState(origState)
 		updated := n.UpdateState(testCase.State)
 

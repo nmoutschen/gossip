@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -66,7 +67,7 @@ func (p *Peer) CanPeer(tgt *Peer) bool {
 
 //Get retrieves the latest state from the peer
 func (p *Peer) Get() (State, error) {
-	res, err := http.Get(p.config.Protocol + "://" + p.Addr.String())
+	res, err := http.Get(p.URL())
 	if err != nil || res.StatusCode != http.StatusOK {
 		log.WithFields(log.Fields{"peer": p, "func": "Get"}).Warn("Failed to retrieve the latest state")
 		p.UpdateStatus(false)
@@ -89,7 +90,7 @@ func (p *Peer) Get() (State, error) {
 /*GetPeers retrieves the peers of this peer.
  */
 func (p *Peer) GetPeers() ([]Addr, error) {
-	res, err := http.Get(p.config.Protocol + "://" + p.Addr.String() + "/peers")
+	res, err := http.Get(p.URL() + "/peers")
 	if err != nil || res.StatusCode != http.StatusOK {
 		log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Warnf("Failed to retrieve peers: %d", res.StatusCode)
 		p.UpdateStatus(false)
@@ -110,7 +111,7 @@ func (p *Peer) GetPeers() ([]Addr, error) {
 
 //IsIrrecoverable returns if a peer is considered as permanently unreachable
 func (p *Peer) IsIrrecoverable() bool {
-	//Divide by 1000 to convert from ms to seconds
+	//Divide by 1000 to convert MaxPingDelay from ms to seconds
 	return p.LastSuccess+(p.config.Node.MaxPingDelay/1000) < time.Now().Unix()
 }
 
@@ -118,7 +119,7 @@ func (p *Peer) IsIrrecoverable() bool {
 unreachable for a controller node.
 */
 func (p *Peer) IsCtrlIrrecoverable() bool {
-	//Divide by 1000 to convert from ms to seconds
+	//Divide by 1000 to convert MaxPingDelay from ms to seconds
 	return p.LastSuccess+(p.config.Controller.MaxPingDelay/1000) < time.Now().Unix()
 }
 
@@ -135,7 +136,7 @@ func (p *Peer) IsUnreachable() bool {
 func (p *Peer) Ping() {
 	log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Debug("Ping")
 
-	res, err := http.Get(p.config.Protocol + "://" + p.Addr.String() + "/status")
+	res, err := http.Get(p.URL() + "/status")
 	if err != nil || res.StatusCode != http.StatusOK {
 		log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Warn("Ping failed")
 		p.UpdateStatus(false)
@@ -172,7 +173,7 @@ func (p *Peer) Send(state State) {
 
 	//Try to send the state to the peer
 	for i := 0; i <= p.config.Peer.MaxRetries; i++ {
-		res, err := http.Post(p.config.Protocol+"://"+p.Addr.String(), "application/json", bytes.NewBuffer(jsonVal))
+		res, err := http.Post(p.URL(), "application/json", bytes.NewBuffer(jsonVal))
 		if err == nil && res.StatusCode == http.StatusOK {
 			p.UpdateStatus(true)
 			return
@@ -204,7 +205,7 @@ func (p *Peer) SendPeeringRequest(addr Addr) {
 
 	//Try to send a peering request to the peer
 	for i := 0; i <= p.config.Peer.MaxRetries; i++ {
-		res, err := http.Post(p.config.Protocol+"://"+p.Addr.String()+"/peers", "application/json", bytes.NewBuffer(jsonVal))
+		res, err := http.Post(p.URL()+"/peers", "application/json", bytes.NewBuffer(jsonVal))
 		if err == nil && res.StatusCode == http.StatusOK {
 			p.UpdateStatus(true)
 			return
@@ -242,4 +243,9 @@ func (p *Peer) UpdateStatus(ok bool) {
 		p.Attempts++
 		log.WithFields(log.Fields{"peer": p, "func": "UpdateStatus"}).Infof("%d unsuccessful attempts", p.Attempts)
 	}
+}
+
+//URL returns the complete URL for that peer
+func (p *Peer) URL() string {
+	return fmt.Sprintf("%s://%s:%d", p.config.Protocol, p.Addr.IP, p.Addr.Port)
 }
