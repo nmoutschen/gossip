@@ -20,7 +20,7 @@ type Peer struct {
 	//LastState is the identifier for the last known data state for that peer
 	LastState int64
 	//LastSuccess is the timestamp in seconds when the last successful contact with the peer was made
-	LastSuccess int64
+	LastSuccess time.Time
 	//Peers is the list of peers of this peer
 	Peers []*Peer
 
@@ -36,7 +36,7 @@ func NewPeer(addr Addr, config *Config) *Peer {
 
 	p := &Peer{
 		Addr:        addr,
-		LastSuccess: time.Now().Unix(),
+		LastSuccess: time.Now(),
 
 		config: config,
 	}
@@ -68,8 +68,13 @@ func (p *Peer) CanPeer(tgt *Peer) bool {
 //Get retrieves the latest state from the peer
 func (p *Peer) Get() (State, error) {
 	res, err := http.Get(p.URL())
-	if err != nil || res.StatusCode != http.StatusOK {
-		log.WithFields(log.Fields{"peer": p, "func": "Get"}).Warn("Failed to retrieve the latest state")
+	if err != nil {
+		log.WithFields(log.Fields{"peer": p, "func": "Get"}).Warn("Failed to retrieve the latest state with error: %s", err.Error())
+		p.UpdateStatus(false)
+		return State{}, err
+	}
+	if res.StatusCode != http.StatusOK {
+		log.WithFields(log.Fields{"peer": p, "func": "Get"}).Warnf("Failed to retrieve the latest state with status code %d", res.StatusCode)
 		p.UpdateStatus(false)
 		return State{}, errors.New("Failed to retrieve the latest state")
 	}
@@ -91,8 +96,13 @@ func (p *Peer) Get() (State, error) {
  */
 func (p *Peer) GetPeers() ([]Addr, error) {
 	res, err := http.Get(p.URL() + "/peers")
-	if err != nil || res.StatusCode != http.StatusOK {
-		log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Warnf("Failed to retrieve peers: %d", res.StatusCode)
+	if err != nil {
+		log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Warnf("Failed to retrieve peers with error: %s", err.Error())
+		p.UpdateStatus(false)
+		return nil, err
+	}
+	if res.StatusCode != http.StatusOK {
+		log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Warnf("Failed to retrieve peers with status code %d", res.StatusCode)
 		p.UpdateStatus(false)
 		return nil, errors.New("Failed to retrieve peers")
 	}
@@ -111,16 +121,14 @@ func (p *Peer) GetPeers() ([]Addr, error) {
 
 //IsIrrecoverable returns if a peer is considered as permanently unreachable
 func (p *Peer) IsIrrecoverable() bool {
-	//Divide by 1000 to convert MaxPingDelay from ms to seconds
-	return p.LastSuccess+(p.config.Node.MaxPingDelay/1000) < time.Now().Unix()
+	return p.LastSuccess.Add(p.config.Node.MaxPingDelay).Before(time.Now())
 }
 
 /*IsCtrlIrrecoverable returns if a peer is considered as permanently
 unreachable for a controller node.
 */
 func (p *Peer) IsCtrlIrrecoverable() bool {
-	//Divide by 1000 to convert MaxPingDelay from ms to seconds
-	return p.LastSuccess+(p.config.Controller.MaxPingDelay/1000) < time.Now().Unix()
+	return p.LastSuccess.Add(p.config.Controller.MaxScanDelay).Before(time.Now())
 }
 
 /*IsUnreachable returns if the peer is considered unreachable
@@ -137,8 +145,13 @@ func (p *Peer) Ping() {
 	log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Debug("Ping")
 
 	res, err := http.Get(p.URL() + "/status")
-	if err != nil || res.StatusCode != http.StatusOK {
-		log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Warn("Ping failed")
+	if err != nil {
+		log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Warnf("Ping failed with error: %s", err)
+		p.UpdateStatus(false)
+		return
+	}
+	if res.StatusCode != http.StatusOK {
+		log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Warnf("Ping failed with status code %d", res.StatusCode)
 		p.UpdateStatus(false)
 		return
 	}
@@ -180,7 +193,7 @@ func (p *Peer) Send(state State) {
 		}
 
 		//TODO: add jitter
-		time.Sleep(p.config.Peer.BackoffDuration * time.Millisecond * (1 << i))
+		time.Sleep(p.config.Peer.BackoffDuration * (1 << i))
 	}
 
 	/*Set the status as failed for this message.
@@ -238,7 +251,7 @@ as failed (see Peer.IsUnreachable).
 func (p *Peer) UpdateStatus(ok bool) {
 	if ok {
 		p.Attempts = 0
-		p.LastSuccess = time.Now().Unix()
+		p.LastSuccess = time.Now()
 	} else {
 		p.Attempts++
 		log.WithFields(log.Fields{"peer": p, "func": "UpdateStatus"}).Infof("%d unsuccessful attempts", p.Attempts)

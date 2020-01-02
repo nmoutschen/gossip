@@ -398,7 +398,7 @@ func (c *Controller) removePeerWorker(removePeerChan chan Addr) {
 //scanWorker periodically scans peers
 func (c *Controller) scanWorker() {
 	for {
-		time.Sleep(c.config.Controller.ScanInterval * time.Millisecond)
+		time.Sleep(c.config.Controller.ScanInterval)
 		log.WithFields(log.Fields{"controller": c, "func": "scanWorker"}).Info("Start scan")
 
 		//Scan all nodes

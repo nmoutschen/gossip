@@ -13,14 +13,14 @@ export NODE_PIDS=""
 # Start nodes
 pushd ./node/
 for i in {8080..8089}; do
-    GOSSIP_PORT=$i go run . &>/dev/null & export NODE_PIDS="$NODE_PIDS $!"
+    GOSSIP_NODE_PORT=$i go run . &>/dev/null & export NODE_PIDS="$NODE_PIDS $!"
 done
 popd
 echo "\$NODE_PIDS=$NODE_PIDS"
 
 # Start controller
 pushd ./control/
-go run . &
+GOSSIP_CONTROLLER_SCANINTERVAL="10s" go run . &
 export CONTROL_PID=$!
 echo "\$CONTROL_PID=$CONTROL_PID"
 popd

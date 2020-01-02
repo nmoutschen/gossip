@@ -211,7 +211,7 @@ state.
 
 This returns true if the internal state has been updated.
 */
-func (n *Node) UpdateState(state State) bool {
+func (n *Node) UpdateState(state State) (State, bool) {
 	//New state received from the end-user
 	if state.Timestamp == 0 {
 		state.Timestamp = time.Now().UnixNano()
@@ -225,10 +225,10 @@ func (n *Node) UpdateState(state State) bool {
 	case state.Timestamp > n.State.Timestamp:
 		log.WithFields(log.Fields{"node": n, "state": state, "func": "stateWorker"}).Info("Received new state")
 		n.State = state
-		return true
+		return state, true
 	}
 
-	return false
+	return state, false
 }
 
 /*fetchStateWorker waits for peers on the n.fetchStateChan channel and
@@ -289,7 +289,7 @@ func (n *Node) peerSendStateWorker() {
 //pingWorker checks the status of all peers at regular interval.
 func (n *Node) pingWorker() {
 	for {
-		time.Sleep(n.config.Node.PingInterval * time.Millisecond)
+		time.Sleep(n.config.Node.PingInterval)
 		n.PingPeers()
 	}
 }
@@ -301,7 +301,7 @@ func (n *Node) stateWorker() {
 	for {
 		state := <-n.stateChan
 
-		if n.UpdateState(state) {
+		if state, ok := n.UpdateState(state); ok {
 			n.peerStateChan <- state
 		}
 	}

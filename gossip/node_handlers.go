@@ -75,7 +75,7 @@ func (n *Node) rootPostHandler(w http.ResponseWriter, r *http.Request) {
 	state := &State{}
 
 	if err := json.NewDecoder(r.Body).Decode(state); err != nil {
-		log.WithFields(log.Fields{"node": n, "func": "rootPostHandler"}).Warn("Failed to decode request body")
+		log.WithFields(log.Fields{"node": n, "func": "rootPostHandler"}).Warn("Failed to decode request body: %s", err.Error())
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
 		return
 	}

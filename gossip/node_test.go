@@ -306,7 +306,7 @@ func TestNodeUpdateState(t *testing.T) {
 	for i, testCase := range testCases {
 		n := NewNode(nil)
 		n.UpdateState(origState)
-		updated := n.UpdateState(testCase.State)
+		_, updated := n.UpdateState(testCase.State)
 
 		if updated != testCase.Expected {
 			t.Errorf("n.UpdateState() == %t for test case %d; want %t", updated, i, testCase.Expected)

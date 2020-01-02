@@ -27,9 +27,9 @@ func TestNewPeer(t *testing.T) {
 	if p.Addr != addr {
 		t.Errorf("p.Addr == %v; want %v", p.Addr, addr)
 	}
-	maxLastSuccess := time.Now().Unix() - p.config.Node.MaxPingDelay
-	if p.LastSuccess < maxLastSuccess {
-		t.Errorf("p.LastSuccess == %d; want >= %d", p.LastSuccess, maxLastSuccess)
+	maxLastSuccess := time.Now().Add(-p.config.Node.MaxPingDelay)
+	if p.LastSuccess.Before(maxLastSuccess) {
+		t.Errorf("p.LastSuccess == %v; want >= %v", p.LastSuccess, maxLastSuccess)
 	}
 }
 
@@ -77,8 +77,8 @@ func TestPeerGet(t *testing.T) {
 			if err != nil {
 				t.Errorf("err == %v; want %v", err, nil)
 			}
-			if p.LastSuccess == 0 {
-				t.Errorf("p.LastSuccess == %d after p.Get()", p.LastSuccess)
+			if p.LastSuccess == (time.Time{}) {
+				t.Errorf("p.LastSuccess == %v after p.Get()", p.LastSuccess)
 			}
 			if p.Attempts != 0 {
 				t.Errorf("p.Attempts == %d after p.Get(); want 0", p.Attempts)
@@ -117,8 +117,8 @@ func TestPeerGetFail(t *testing.T) {
 	if err == nil {
 		t.Errorf("err == %v", err)
 	}
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after failed p.Get(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after failed p.Get(); want %d", p.LastSuccess, 0)
 	}
 	if p.Attempts != 1 {
 		t.Errorf("p.Attempts == %d after failed p.Get(); want %d", p.Attempts, 1)
@@ -150,8 +150,8 @@ func TestPeerGetFail2(t *testing.T) {
 	if err == nil {
 		t.Errorf("err == %v", err)
 	}
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after failed p.Get(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after failed p.Get(); want %d", p.LastSuccess, 0)
 	}
 	if p.Attempts != 1 {
 		t.Errorf("p.Attempts == %d after failed p.Get(); want %d", p.Attempts, 1)
@@ -192,8 +192,8 @@ func TestPeerGetPeers(t *testing.T) {
 			if err != nil {
 				t.Errorf("err == %v; want %v", err, nil)
 			}
-			if p.LastSuccess == 0 {
-				t.Errorf("p.LastSuccess == %d after p.GetPeers()", p.LastSuccess)
+			if p.LastSuccess == (time.Time{}) {
+				t.Errorf("p.LastSuccess == %v after p.GetPeers()", p.LastSuccess)
 			}
 			if p.Attempts != 0 {
 				t.Errorf("p.Attempts == %d after p.GetPeers(); want 0", p.Attempts)
@@ -227,8 +227,8 @@ func TestPeerGetPeersFail(t *testing.T) {
 	if err == nil {
 		t.Errorf("err == %v", err)
 	}
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after failed p.GetPeers(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after failed p.GetPeers(); want %d", p.LastSuccess, 0)
 	}
 	if p.Attempts != 1 {
 		t.Errorf("p.Attempts == %d after failed p.GetPeers(); want %d", p.Attempts, 1)
@@ -261,8 +261,8 @@ func TestPeerGetPeersFail2(t *testing.T) {
 	if err == nil {
 		t.Errorf("err == %v", err)
 	}
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after failed p.GetPeers(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after failed p.GetPeers(); want %d", p.LastSuccess, 0)
 	}
 	if p.Attempts != 1 {
 		t.Errorf("p.Attempts == %d after failed p.GetPeers(); want %d", p.Attempts, 1)
@@ -279,18 +279,18 @@ func TestPeerIsIrrecoverable(t *testing.T) {
 	p := &Peer{config: DefaultConfig}
 	testCases := []struct {
 		Expected    bool
-		LastSuccess int64
+		LastSuccess time.Time
 	}{
-		{false, time.Now().Unix()},
-		{false, time.Now().Unix() - (p.config.Node.MaxPingDelay / 1000) + 5},
-		{true, 0},
-		{true, time.Now().Unix() - (p.config.Node.MaxPingDelay / 1000) - 5},
+		{false, time.Now()},
+		{false, time.Now().Add(-p.config.Node.MaxPingDelay + 5*time.Second)},
+		{true, time.Time{}},
+		{true, time.Now().Add(-p.config.Node.MaxPingDelay - 5*time.Second)},
 	}
 
 	for _, testCase := range testCases {
 		p.LastSuccess = testCase.LastSuccess
 		if p.IsIrrecoverable() != testCase.Expected {
-			t.Errorf("p.IsIrrecoverable() == %t with p.LastSuccess == %d; want %t", p.IsIrrecoverable(), p.LastSuccess, testCase.Expected)
+			t.Errorf("p.IsIrrecoverable() == %t with p.LastSuccess == %v; want %t", p.IsIrrecoverable(), p.LastSuccess, testCase.Expected)
 		}
 	}
 }
@@ -299,18 +299,18 @@ func TestPeerIsCtrlIrrecoverable(t *testing.T) {
 	p := &Peer{config: DefaultConfig}
 	testCases := []struct {
 		Expected    bool
-		LastSuccess int64
+		LastSuccess time.Time
 	}{
-		{false, time.Now().Unix()},
-		{false, time.Now().Unix() - (DefaultConfig.Controller.MaxPingDelay / 1000) + 5},
-		{true, 0},
-		{true, time.Now().Unix() - (DefaultConfig.Controller.MaxPingDelay / 1000) - 5},
+		{false, time.Now()},
+		{false, time.Now().Add(-p.config.Controller.MaxScanDelay + 5*time.Second)},
+		{true, time.Time{}},
+		{true, time.Now().Add(-p.config.Controller.MaxScanDelay - 5*time.Second)},
 	}
 
 	for _, testCase := range testCases {
 		p.LastSuccess = testCase.LastSuccess
 		if p.IsCtrlIrrecoverable() != testCase.Expected {
-			t.Errorf("p.IsCtrlIrrecoverable() == %t with p.LastSuccess == %d; want %t", p.IsCtrlIrrecoverable(), p.LastSuccess, testCase.Expected)
+			t.Errorf("p.IsCtrlIrrecoverable() == %t with p.LastSuccess == %v; want %t", p.IsCtrlIrrecoverable(), p.LastSuccess, testCase.Expected)
 		}
 	}
 }
@@ -362,8 +362,8 @@ func TestPeerPing(t *testing.T) {
 
 			p.Ping()
 
-			if p.LastSuccess == 0 {
-				t.Errorf("p.LastSuccess == %d after p.Ping()", p.LastSuccess)
+			if p.LastSuccess == (time.Time{}) {
+				t.Errorf("p.LastSuccess == %v after p.Ping()", p.LastSuccess)
 			}
 			if p.Attempts != 0 {
 				t.Errorf("p.Attempts == %d after p.Ping(); want 0", p.Attempts)
@@ -397,8 +397,8 @@ func TestPeerPingFail(t *testing.T) {
 	if p.LastState != 0 {
 		t.Errorf("p.LastState == %d after failed p.Ping(); want %d", p.LastState, 0)
 	}
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after failed p.Ping(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after failed p.Ping(); want %v", p.LastSuccess, time.Time{})
 	}
 	if p.Attempts != 1 {
 		t.Errorf("p.Attempts == %d after failed p.Ping(); want %d", p.Attempts, 1)
@@ -425,8 +425,8 @@ func TestPeerPingFail2(t *testing.T) {
 	if p.LastState != 0 {
 		t.Errorf("p.LastState == %d after failed p.Ping(); want %d", p.LastState, 0)
 	}
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after failed p.Ping(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after failed p.Ping(); want %d", p.LastSuccess, 0)
 	}
 	if p.Attempts != 1 {
 		t.Errorf("p.Attempts == %d after failed p.Ping(); want %d", p.Attempts, 1)
@@ -455,8 +455,8 @@ func TestPeerSend(t *testing.T) {
 	}
 
 	p.Send(state)
-	if p.LastSuccess == 0 {
-		t.Errorf("p.LastSuccess == %d after p.Send()", p.LastSuccess)
+	if p.LastSuccess == (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after p.Send()", p.LastSuccess)
 	}
 	if p.Attempts != 0 {
 		t.Errorf("p.Attempts == %d after p.Send(); want %d", p.Attempts, 0)
@@ -486,8 +486,8 @@ func TestPeerSendFail(t *testing.T) {
 
 	p.Send(state)
 
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after failed p.Send(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after failed p.Send(); want %d", p.LastSuccess, 0)
 	}
 	if p.Attempts != 1 {
 		t.Errorf("p.Attempts == %d after failed p.Send(); want %d", p.Attempts, 1)
@@ -518,8 +518,8 @@ func TestPeerSendUnreachable(t *testing.T) {
 
 	p.Send(state)
 
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after unreachable p.Send(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after unreachable p.Send(); want %d", p.LastSuccess, 0)
 	}
 	if p.Attempts != DefaultConfig.Peer.MaxAttempts {
 		t.Errorf("p.Attempts == %d after unreachable p.Send(); want %d", p.Attempts, DefaultConfig.Peer.MaxAttempts)
@@ -546,8 +546,8 @@ func TestPeerSendPeeringRequest(t *testing.T) {
 
 	p.SendPeeringRequest(addr)
 
-	if p.LastSuccess == 0 {
-		t.Errorf("p.LastSuccess == %d after p.SendPeeringRequest()", p.LastSuccess)
+	if p.LastSuccess == (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after p.SendPeeringRequest()", p.LastSuccess)
 	}
 	if p.Attempts != 0 {
 		t.Errorf("p.Attempts == %d after p.SendPeeringRequest(); want %d", p.Attempts, 0)
@@ -574,8 +574,8 @@ func TestPeerSendPeeringRequestFail(t *testing.T) {
 
 	p.SendPeeringRequest(addr)
 
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after failed p.SendPeeringRequest(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after failed p.SendPeeringRequest(); want %d", p.LastSuccess, 0)
 	}
 	if p.Attempts != 1 {
 		t.Errorf("p.Attempts == %d after failed p.SendPeeringRequest(); want %d", p.Attempts, 1)
@@ -586,8 +586,8 @@ func TestPeerUpdateStatus(t *testing.T) {
 	p := &Peer{config: DefaultConfig}
 
 	p.UpdateStatus(false)
-	if p.LastSuccess != 0 {
-		t.Errorf("p.LastSuccess == %d after p.UpdateStatus(); want %d", p.LastSuccess, 0)
+	if p.LastSuccess != (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after p.UpdateStatus(); want %d", p.LastSuccess, 0)
 	}
 	if p.Attempts != 1 {
 		t.Errorf("p.Attempts == %d after p.UpdateStatus(); want %d", p.Attempts, 1)
@@ -595,8 +595,8 @@ func TestPeerUpdateStatus(t *testing.T) {
 
 	p = &Peer{config: DefaultConfig}
 	p.UpdateStatus(true)
-	if p.LastSuccess == 0 {
-		t.Errorf("p.LastSuccess == %d after p.UpdateStatus()", p.LastSuccess)
+	if p.LastSuccess == (time.Time{}) {
+		t.Errorf("p.LastSuccess == %v after p.UpdateStatus()", p.LastSuccess)
 	}
 	if p.Attempts != 0 {
 		t.Errorf("p.Attempts == %d after p.UpdateStatus(); want %d", p.Attempts, 0)
