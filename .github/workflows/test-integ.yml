@@ -1,19 +1,19 @@
 name: test-integ
 on:
-    push:
-      branches:
-        - master
-      paths:
-        - "control/**"
-        - "gossip/**"
-        - "node/**"
-    pull_request:
-      branches:
-        - master
-      paths:
-        - "control/**"
-        - "gossip/**"
-        - "node/**"
+  push:
+    branches:
+      - master
+    paths:
+      - "control/**"
+      - "gossip/**"
+      - "node/**"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "control/**"
+      - "gossip/**"
+      - "node/**"
   jobs:
     test-integ:
       strategy:
