@@ -158,7 +158,7 @@ func TestNodePeersHandlerOptions(t *testing.T) {
 
 func TestNodeRootHandlerGet(t *testing.T) {
 	//Prepare state and node
-	state := State{time.Now().UnixNano(), "Test data"}
+	state := State{time.Now().UnixNano(), "TestNodeRootHandlerGet"}
 	n := NewNode(nil)
 	n.State = state
 
@@ -183,7 +183,7 @@ func TestNodeRootHandlerGet(t *testing.T) {
 
 func TestNodeRootHandlerPost(t *testing.T) {
 	//Prepare state and node
-	state := State{time.Now().UnixNano(), "Test data"}
+	state := State{time.Now().UnixNano(), "TestNodeRootHandlerPost"}
 	n := NewNode(nil)
 	reqBody, _ := json.Marshal(state)
 
@@ -222,7 +222,7 @@ func TestNodeRootHandlerOptions(t *testing.T) {
 
 func TestNodeStatusHandlerGet(t *testing.T) {
 	//Prepare state and node
-	state := State{time.Now().UnixNano(), "Test data"}
+	state := State{time.Now().UnixNano(), "TestNodeStatusHandlerGet"}
 	n := NewNode(nil)
 	n.State = state
 
