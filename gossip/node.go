@@ -23,10 +23,17 @@ type Node struct {
 	peerStateChan chan State
 	//stateChan is a channel to receive state updates
 	stateChan chan State
+
+	//config stores the configuration parameters
+	config *Config
 }
 
 //NewNode creates a new Node
-func NewNode(addr Addr) *Node {
+func NewNode(addr Addr, config *Config) *Node {
+	if config == nil {
+		config = DefaultConfig
+	}
+
 	n := &Node{
 		Addr: addr,
 
@@ -34,6 +41,8 @@ func NewNode(addr Addr) *Node {
 		addPeerChan:    make(chan Addr, 8),
 		peerStateChan:  make(chan State, 8),
 		stateChan:      make(chan State, 8),
+
+		config: config,
 	}
 
 	log.WithFields(log.Fields{"node": n, "func": "NewNode"}).Info("Initializing node")
@@ -58,9 +67,7 @@ func (n *Node) AddPeer(addr Addr) {
 	}
 
 	//Add the peer to the list of known peers.
-	peer := &Peer{
-		Addr: addr,
-	}
+	peer := NewPeer(addr, n.config)
 	n.Peers = append(n.Peers, peer)
 
 	//Send a peering request.

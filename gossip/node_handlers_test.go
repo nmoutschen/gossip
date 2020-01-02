@@ -11,8 +11,8 @@ import (
 
 func TestNodePeersHandlerGet(t *testing.T) {
 	//Prepare peer and node
-	peer := NewPeer(Addr{"127.0.0.1", 8081})
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	peer := NewPeer(Addr{"127.0.0.1", 8081}, nil)
+	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
 	n.Peers = append(n.Peers, peer)
 
 	//Send request
@@ -39,7 +39,7 @@ func TestNodePeersHandlerGet(t *testing.T) {
 func TestNodePeersHandlerPost(t *testing.T) {
 	//Prepare address and node
 	addr := Addr{"127.0.0.1", 8081}
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
 	reqBody, _ := json.Marshal(addr)
 
 	//Send request
@@ -62,7 +62,7 @@ func TestNodePeersHandlerPost(t *testing.T) {
 
 func TestNodePeersHandlerOptions(t *testing.T) {
 	//Prepare peer and node
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
 
 	//Send request
 	req := httptest.NewRequest("OPTIONS", "http://127.0.0.1:8080/peers", nil)
@@ -78,7 +78,7 @@ func TestNodePeersHandlerOptions(t *testing.T) {
 func TestNodeRootHandlerGet(t *testing.T) {
 	//Prepare state and node
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
 	n.State = state
 
 	//Send request
@@ -103,7 +103,7 @@ func TestNodeRootHandlerGet(t *testing.T) {
 func TestNodeRootHandlerPost(t *testing.T) {
 	//Prepare state and node
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
 	reqBody, _ := json.Marshal(state)
 
 	//Send request
@@ -126,7 +126,7 @@ func TestNodeRootHandlerPost(t *testing.T) {
 
 func TestNodeRootHandlerOptions(t *testing.T) {
 	//Prepare peer and node
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
 
 	//Send request
 	req := httptest.NewRequest("OPTIONS", "http://127.0.0.1:8080", nil)
@@ -142,7 +142,7 @@ func TestNodeRootHandlerOptions(t *testing.T) {
 func TestNodeStatusHandlerGet(t *testing.T) {
 	//Prepare state and node
 	state := State{time.Now().UnixNano(), "Test data"}
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
 	n.State = state
 
 	//Send request
@@ -162,7 +162,7 @@ func TestNodeStatusHandlerGet(t *testing.T) {
 
 func TestNodeStatusHandlerOptions(t *testing.T) {
 	//Prepare peer and node
-	n := NewNode(Addr{"127.0.0.1", 8080})
+	n := NewNode(Addr{"127.0.0.1", 8080}, nil)
 
 	//Send request
 	req := httptest.NewRequest("OPTIONS", "http://127.0.0.1:8080/status", nil)

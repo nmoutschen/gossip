@@ -10,8 +10,8 @@ import (
 
 func TestControllerPeersHandlerGet(t *testing.T) {
 	//Prepare peer and controller
-	peer := NewPeer(Addr{"127.0.0.1", 8080})
-	c := NewController(Addr{"127.0.0.1", 7080})
+	peer := NewPeer(Addr{"127.0.0.1", 8080}, nil)
+	c := NewController(Addr{"127.0.0.1", 7080}, nil)
 	c.Peers.Store(peer.Addr, peer)
 	peer.Peers = []*Peer{peer}
 
@@ -51,7 +51,7 @@ func TestControllerPeersHandlerGet(t *testing.T) {
 func TestControllerPeersHandlerPost(t *testing.T) {
 	//Prepare addr and controller
 	addr := Addr{"127.0.0.1", 8080}
-	c := NewController(Addr{"127.0.0.1", 7080})
+	c := NewController(Addr{"127.0.0.1", 7080}, nil)
 	reqBody, _ := json.Marshal(addr)
 
 	//Send request

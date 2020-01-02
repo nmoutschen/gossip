@@ -22,13 +22,22 @@ type Peer struct {
 	LastSuccess int64
 	//Peers is the list of peers of this peer
 	Peers []*Peer
+
+	//config store the configuration for the peer
+	config *Config
 }
 
 //NewPeer creates a new Peer
-func NewPeer(addr Addr) *Peer {
+func NewPeer(addr Addr, config *Config) *Peer {
+	if config == nil {
+		config = DefaultConfig
+	}
+
 	p := &Peer{
 		Addr:        addr,
 		LastSuccess: time.Now().Unix(),
+
+		config: config,
 	}
 
 	return p
@@ -57,7 +66,7 @@ func (p *Peer) CanPeer(tgt *Peer) bool {
 
 //Get retrieves the latest state from the peer
 func (p *Peer) Get() (State, error) {
-	res, err := http.Get(Protocol + "://" + p.Addr.String())
+	res, err := http.Get(p.config.Protocol + "://" + p.Addr.String())
 	if err != nil || res.StatusCode != http.StatusOK {
 		log.WithFields(log.Fields{"peer": p, "func": "Get"}).Warn("Failed to retrieve the latest state")
 		p.UpdateStatus(false)
@@ -80,7 +89,7 @@ func (p *Peer) Get() (State, error) {
 /*GetPeers retrieves the peers of this peer.
  */
 func (p *Peer) GetPeers() ([]Addr, error) {
-	res, err := http.Get(Protocol + "://" + p.Addr.String() + "/peers")
+	res, err := http.Get(p.config.Protocol + "://" + p.Addr.String() + "/peers")
 	if err != nil || res.StatusCode != http.StatusOK {
 		log.WithFields(log.Fields{"peer": p, "func": "GetPeers"}).Warnf("Failed to retrieve peers: %d", res.StatusCode)
 		p.UpdateStatus(false)
@@ -124,7 +133,7 @@ func (p *Peer) IsUnreachable() bool {
 func (p *Peer) Ping() {
 	log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Debug("Ping")
 
-	res, err := http.Get(Protocol + "://" + p.Addr.String() + "/status")
+	res, err := http.Get(p.config.Protocol + "://" + p.Addr.String() + "/status")
 	if err != nil || res.StatusCode != http.StatusOK {
 		log.WithFields(log.Fields{"peer": p, "func": "Ping"}).Warn("Ping failed")
 		p.UpdateStatus(false)
@@ -161,7 +170,7 @@ func (p *Peer) Send(state State) {
 
 	//Try to send the state to the peer
 	for i := 0; i <= PeerMaxRetries; i++ {
-		res, err := http.Post(Protocol+"://"+p.Addr.String(), "application/json", bytes.NewBuffer(jsonVal))
+		res, err := http.Post(p.config.Protocol+"://"+p.Addr.String(), "application/json", bytes.NewBuffer(jsonVal))
 		if err == nil && res.StatusCode == http.StatusOK {
 			p.UpdateStatus(true)
 			return
@@ -193,7 +202,7 @@ func (p *Peer) SendPeeringRequest(addr Addr) {
 
 	//Try to send a peering request to the peer
 	for i := 0; i <= PeerMaxRetries; i++ {
-		res, err := http.Post(Protocol+"://"+p.Addr.String()+"/peers", "application/json", bytes.NewBuffer(jsonVal))
+		res, err := http.Post(p.config.Protocol+"://"+p.Addr.String()+"/peers", "application/json", bytes.NewBuffer(jsonVal))
 		if err == nil && res.StatusCode == http.StatusOK {
 			p.UpdateStatus(true)
 			return

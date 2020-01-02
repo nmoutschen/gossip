@@ -18,16 +18,25 @@ type Controller struct {
 	//Peers is a sync.Map[Addr]*Peer containing all known peers.
 	Peers *sync.Map
 
+	//addPeerChan is a channel to receive peering requests
 	addPeerChan chan Addr
+
+	//config stores the configuration parameters
+	config *Config
 }
 
 //NewController creates a new controller instance
-func NewController(addr Addr) *Controller {
+func NewController(addr Addr, config *Config) *Controller {
+	if config == nil {
+		config = DefaultConfig
+	}
+
 	c := &Controller{
 		Addr:  addr,
 		Peers: &sync.Map{},
 
 		addPeerChan: make(chan Addr, 8),
+		config:      config,
 	}
 
 	log.WithFields(log.Fields{"controller": c, "func": "NewController"}).Info("Initializing controller")
@@ -358,7 +367,7 @@ func (c *Controller) addPeerWorker() {
 		}
 
 		//Add peers to the list of known peers
-		peer := NewPeer(addr)
+		peer := NewPeer(addr, c.config)
 		c.Peers.Store(addr, peer)
 	}
 }
@@ -429,7 +438,7 @@ func (c *Controller) scanPeer(peer *Peer, scanned *sync.Map, wg *sync.WaitGroup)
 	//Parse peers of the peer
 	for _, addr := range peers {
 		//Load the peer
-		iSubPeer, _ := c.Peers.LoadOrStore(addr, NewPeer(addr))
+		iSubPeer, _ := c.Peers.LoadOrStore(addr, NewPeer(addr, c.config))
 		subPeer, ok := iSubPeer.(*Peer)
 		if !ok {
 			log.WithFields(log.Fields{"controller": c, "func": "scanPeer", "peer": peer, "subPeer": subPeer}).Warn("Failed to assert subPeer")
