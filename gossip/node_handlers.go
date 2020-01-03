@@ -36,6 +36,12 @@ func (n *Node) peersDeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Invalid port number
+	if (*addr).Port == 0 {
+		response(w, r, http.StatusBadRequest, "Required property 'port' is 0 or not present")
+		return
+	}
+
 	/*Infer that the client node does not know its IP address and use the one
 	from the HTTP request instead.
 	*/
@@ -68,6 +74,12 @@ func (n *Node) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(addr); err != nil {
 		log.WithFields(log.Fields{"node": n, "func": "peersPostHandler"}).Warnf("Failed to decode request body: %s", err.Error())
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
+		return
+	}
+
+	//Invalid port number
+	if (*addr).Port == 0 {
+		response(w, r, http.StatusBadRequest, "Required property 'port' is 0 or not present")
 		return
 	}
 
@@ -113,6 +125,12 @@ func (n *Node) rootPostHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(state); err != nil {
 		log.WithFields(log.Fields{"node": n, "func": "rootPostHandler"}).Warnf("Failed to decode request body: %s", err.Error())
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
+		return
+	}
+
+	//Invalid data
+	if state.Data == "" {
+		response(w, r, http.StatusBadRequest, "Required property 'data' is empty or not present")
 		return
 	}
 

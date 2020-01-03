@@ -89,6 +89,22 @@ func TestNodePeersHandlerPostNoIP(t *testing.T) {
 	}
 }
 
+func TestNodePeersHandlerPostEmpty(t *testing.T) {
+	//Prepare state and node
+	n := NewNode(nil)
+
+	//Send request
+	req := httptest.NewRequest("POST", n.URL()+"/peers", bytes.NewBuffer([]byte("{}")))
+	w := httptest.NewRecorder()
+	n.peersHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusBadRequest)
+	}
+}
+
 func TestNodePeersHandlerDelete(t *testing.T) {
 	//Prepare address and node
 	addr := Addr{"127.0.0.1", 8081}
@@ -138,6 +154,22 @@ func TestNodePeersHandlerDeleteNoIP(t *testing.T) {
 		if rAddr.Port != addr.Port {
 			t.Errorf("rAddr.Port == %d; want %d", rAddr.Port, addr.Port)
 		}
+	}
+}
+
+func TestNodePeersHandlerDeleteEmpty(t *testing.T) {
+	//Prepare state and node
+	n := NewNode(nil)
+
+	//Send request
+	req := httptest.NewRequest("DELETE", n.URL()+"/peers", bytes.NewBuffer([]byte("{}")))
+	w := httptest.NewRecorder()
+	n.peersHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusBadRequest)
 	}
 }
 
@@ -202,6 +234,22 @@ func TestNodeRootHandlerPost(t *testing.T) {
 		if rState != state {
 			t.Errorf("rState == %v; want %v", rState, state)
 		}
+	}
+}
+
+func TestNodeRootHandlerPostEmpty(t *testing.T) {
+	//Prepare state and node
+	n := NewNode(nil)
+
+	//Send request
+	req := httptest.NewRequest("POST", n.URL()+"", bytes.NewBuffer([]byte("{}")))
+	w := httptest.NewRecorder()
+	n.rootHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusBadRequest)
 	}
 }
 
