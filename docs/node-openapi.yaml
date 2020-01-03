@@ -1,0 +1,206 @@
+openapi: "3.0.2"
+info:
+  title: Data Node API
+  version: 1.0.0
+  description: Data Node API
+
+tags:
+  - name: state
+    description: State operations
+  - name: peers
+    description: Peer operations
+
+paths:
+  /:
+    get:
+      description: |
+        Returns the data state
+      tags:
+        - state
+      operationId: getState
+      responses:
+        200:
+          description: Returns the data state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/State"
+        default:
+          description: On error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+    post:
+      description: |
+        Update the data state
+      operationId: postState
+      tags:
+        - state
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/State"
+      responses:
+        200:
+          description: State received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        default:
+          description: On error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /peers:
+    get:
+      description: |
+        Retrieve the list of peers of this node
+      operationId: getPeers
+      tags:
+        - peers
+      responses:
+        200:
+          description: Returns the array of peers
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - peers
+                properties:
+                  peers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Addr"
+        default:
+          description: On error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+    post:
+      description: |
+        Add a new peer
+      operationId: postPeers
+      tags:
+        - peers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Addr"
+      responses:
+        200:
+          description: Peering request received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        default:
+          description: On error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+    delete:
+      description: |
+        Remove a new peer
+      operationId: deletePeers
+      tags:
+        - peers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Addr"
+      responses:
+        200:
+          description: Peer deletion request received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        default:
+          description: On error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /status:
+    get:
+      description: |
+        Retrieve the latest state timestamp
+      operationId: getStatus
+      tags:
+        - state
+      responses:
+        200:
+          description: Returns the last state timestamp
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - lastState
+                properties:
+                  lastState:
+                    type: integer
+                    description: Timestamp of the state in nanoseconds
+                    example: 1257894000000000000
+        default:
+          description: On error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+components:
+  schemas:
+    Addr:
+      type: object
+      required:
+        - port
+      properties:
+        ip:
+          type: string
+          example: "127.0.0.1"
+        port:
+          type: integer
+          minimum: 1
+          maximum: 65535
+          example: 8080
+
+    Message:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+
+    State:
+      type: object
+      required:
+        - data
+      properties:
+        time:
+          type: integer
+          description: Timestamp of the state in nanoseconds
+          example: 1257894000000000000
+        data:
+          type: string
+          description: Data state
+          example: This is some data
