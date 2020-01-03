@@ -71,3 +71,19 @@ func TestControllerPeersHandlerPost(t *testing.T) {
 		t.Errorf("rAddr == %v; want %v", rAddr, addr)
 	}
 }
+
+func TestControllerPeersHandlerPostEmpty(t *testing.T) {
+	//Prepare controller
+	c := NewController(nil)
+
+	//Send request
+	req := httptest.NewRequest("POST", "http://127.0.0.1:7080/peers", bytes.NewBuffer([]byte("{}")))
+	w := httptest.NewRecorder()
+	c.peersHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusBadRequest)
+	}
+}

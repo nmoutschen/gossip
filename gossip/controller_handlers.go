@@ -3,6 +3,7 @@ package gossip
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -64,6 +65,20 @@ func (c *Controller) peersPostHandler(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{"controller": c, "func": "peersPostHandler"}).Warn("Failed to decode request body")
 		response(w, r, http.StatusInternalServerError, "Failed to decode request body")
 		return
+	}
+
+	//Invalid port number
+	if (*addr).Port == 0 {
+		response(w, r, http.StatusBadRequest, "Required property 'port' is 0 or not present")
+		return
+	}
+
+	/*Infer that the client node does not know its IP address and use the one
+	from the HTTP request instead.
+	*/
+	if (*addr).IP == "" {
+		log.WithFields(log.Fields{"controller": c, "func": "peersPostHandler"}).Infof("Auto-detecting IP address for peer: %s", strings.SplitN(r.RemoteAddr, ":", 2)[0])
+		(*addr).IP = strings.SplitN(r.RemoteAddr, ":", 2)[0]
 	}
 
 	c.addPeerChan <- *addr
