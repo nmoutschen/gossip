@@ -37,6 +37,74 @@ func TestNodePeersHandlerGet(t *testing.T) {
 	}
 }
 
+func TestNodePeersHandlerDelete(t *testing.T) {
+	//Prepare address and node
+	addr := Addr{"127.0.0.1", 8081}
+	n := NewNode(nil)
+	reqBody, _ := json.Marshal(addr)
+
+	//Send request
+	req := httptest.NewRequest("DELETE", n.URL()+"/peers", bytes.NewBuffer(reqBody))
+	w := httptest.NewRecorder()
+	n.peersHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
+	} else {
+		rAddr := <-n.deletePeerChan
+
+		if rAddr != addr {
+			t.Errorf("rAddr == %v; want %v", rAddr, addr)
+		}
+	}
+}
+
+func TestNodePeersHandlerDeleteNoIP(t *testing.T) {
+	//Prepare address and node
+	addr := Addr{"", 8081}
+	n := NewNode(nil)
+	reqBody, _ := json.Marshal(addr)
+
+	//Send request
+	req := httptest.NewRequest("DELETE", n.URL()+"/peers", bytes.NewBuffer(reqBody))
+	w := httptest.NewRecorder()
+	n.peersHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
+	} else {
+		rAddr := <-n.deletePeerChan
+
+		if rAddr.IP != strings.SplitN(req.RemoteAddr, ":", 2)[0] {
+			t.Errorf("rAddr.IP == %s; want %s", rAddr.IP, strings.SplitN(req.RemoteAddr, ":", 2)[0])
+		}
+
+		if rAddr.Port != addr.Port {
+			t.Errorf("rAddr.Port == %d; want %d", rAddr.Port, addr.Port)
+		}
+	}
+}
+
+func TestNodePeersHandlerDeleteEmpty(t *testing.T) {
+	//Prepare node
+	n := NewNode(nil)
+
+	//Send request
+	req := httptest.NewRequest("DELETE", n.URL()+"/peers", bytes.NewBuffer([]byte("{}")))
+	w := httptest.NewRecorder()
+	n.peersHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusBadRequest)
+	}
+}
+
 func TestNodePeersHandlerPost(t *testing.T) {
 	//Prepare address and node
 	addr := Addr{"127.0.0.1", 8081}
@@ -89,55 +157,19 @@ func TestNodePeersHandlerPostNoIP(t *testing.T) {
 	}
 }
 
-func TestNodePeersHandlerDelete(t *testing.T) {
-	//Prepare address and node
-	addr := Addr{"127.0.0.1", 8081}
+func TestNodePeersHandlerPostEmpty(t *testing.T) {
+	//Prepare node
 	n := NewNode(nil)
-	reqBody, _ := json.Marshal(addr)
 
 	//Send request
-	req := httptest.NewRequest("DELETE", n.URL()+"/peers", bytes.NewBuffer(reqBody))
+	req := httptest.NewRequest("POST", n.URL()+"/peers", bytes.NewBuffer([]byte("{}")))
 	w := httptest.NewRecorder()
 	n.peersHandler(w, req)
 	res := w.Result()
 
 	//Parse response
-	if res.StatusCode != http.StatusOK {
-		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
-	} else {
-		rAddr := <-n.deletePeerChan
-
-		if rAddr != addr {
-			t.Errorf("rAddr == %v; want %v", rAddr, addr)
-		}
-	}
-}
-
-func TestNodePeersHandlerDeleteNoIP(t *testing.T) {
-	//Prepare address and node
-	addr := Addr{"", 8081}
-	n := NewNode(nil)
-	reqBody, _ := json.Marshal(addr)
-
-	//Send request
-	req := httptest.NewRequest("DELETE", n.URL()+"/peers", bytes.NewBuffer(reqBody))
-	w := httptest.NewRecorder()
-	n.peersHandler(w, req)
-	res := w.Result()
-
-	//Parse response
-	if res.StatusCode != http.StatusOK {
-		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusOK)
-	} else {
-		rAddr := <-n.deletePeerChan
-
-		if rAddr.IP != strings.SplitN(req.RemoteAddr, ":", 2)[0] {
-			t.Errorf("rAddr.IP == %s; want %s", rAddr.IP, strings.SplitN(req.RemoteAddr, ":", 2)[0])
-		}
-
-		if rAddr.Port != addr.Port {
-			t.Errorf("rAddr.Port == %d; want %d", rAddr.Port, addr.Port)
-		}
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusBadRequest)
 	}
 }
 
@@ -202,6 +234,22 @@ func TestNodeRootHandlerPost(t *testing.T) {
 		if rState != state {
 			t.Errorf("rState == %v; want %v", rState, state)
 		}
+	}
+}
+
+func TestNodeRootHandlerPostEmpty(t *testing.T) {
+	//Prepare node
+	n := NewNode(nil)
+
+	//Send request
+	req := httptest.NewRequest("POST", n.URL()+"", bytes.NewBuffer([]byte("{}")))
+	w := httptest.NewRecorder()
+	n.rootHandler(w, req)
+	res := w.Result()
+
+	//Parse response
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("res.StatusCode == %d; want %d", res.StatusCode, http.StatusBadRequest)
 	}
 }
 
